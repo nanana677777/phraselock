@@ -508,6 +508,12 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
                                       font=small_font, fill=text_colors["secondary"],
                                       width=content_w)
 
+    # Optional info lines (Settings > Look > Lock-screen info). Hidden items keep updating harmlessly.
+    for flag, item in (("show_round_counter", counter_id), ("show_streak_line", streak_id),
+                       ("show_goal_line", progress_id)):
+        if not cfg.get(flag, True):
+            content.itemconfigure(item, state="hidden")
+
     def bind_canvas_var(var, item_id):
         def update(*_):
             try:

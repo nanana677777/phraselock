@@ -177,6 +177,7 @@ Running the tests before building helps identify problems in the project's teste
 | `hotkeys.py`            | Parsing of the pause hotkey text     |
 | `themes.py`             | Colour themes (built-in and custom) and lock-screen texts |
 | `packs.py`              | Theme pack loading, applying, undo   |
+| `uikit.py`              | Settings widgets: sidebar, switches, dropdowns, palette |
 | `wizard.py`             | First-launch setup wizard            |
 | `whatsnew.py`, `version.py` | "What's new?" window after updates, current version |
 | `packs/`                | Theme packs (`packs/techdom/` and `packs/petdom/` have their own README) |

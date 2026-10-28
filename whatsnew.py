@@ -131,41 +131,50 @@ def run(cfg=None, force=False):
         return remember_version(cfg) if not force else cfg
     import tkinter as tk
     from appicon import apply_window_icon
+    import uikit
+    from uikit import UI_FONT
 
-    BG, CARD, TEXT, MUTED, ACCENT, CYAN = "#050507", "#0d0d12", "#f7f7fb", "#9aa0b4", "#ff1744", "#00e5ff"
+    pal = uikit.apply_palette("#ff1744", "#00e5ff")
+    BG, CARD, TEXT, MUTED, ACCENT, CYAN = pal["BG"], pal["CARD"], pal["TEXT"], pal["MUTED"], pal["ACCENT"], pal["ACCENT2"]
     root = tk.Tk()
     apply_window_icon(root)
     root.title("PhraseLock - What's new?")
-    root.geometry("640x560")
-    root.minsize(480, 320)
+    root.geometry("700x600")
+    root.minsize(520, 360)
     root.configure(bg=BG)
-    tk.Label(root, text="WHAT'S NEW?", font=("Consolas", 16, "bold"), fg=ACCENT, bg=BG).pack(anchor="w", padx=24, pady=(18, 0))
-    tk.Label(root, text=f"PhraseLock {__version__}", font=("Consolas", 10), fg=MUTED, bg=BG).pack(anchor="w", padx=24)
+    top = tk.Frame(root, bg=BG)
+    top.pack(fill="x", padx=32, pady=(26, 0))
+    tk.Label(top, text=f"PHRASELOCK {__version__}", font=(UI_FONT, 9, "bold"), fg=ACCENT, bg=BG).pack(anchor="w")
+    tk.Label(top, text="What's new?", font=(UI_FONT, 22, "bold"), fg=TEXT, bg=BG).pack(anchor="w", pady=(2, 0))
 
     footer = tk.Frame(root, bg=BG)
-    footer.pack(side="bottom", fill="x", padx=24, pady=14)
-    tk.Button(footer, text="Got it", command=root.destroy, bg=ACCENT, fg="white", activebackground=ACCENT,
-              activeforeground="white", relief="flat", bd=0, padx=22, pady=7, cursor="hand2",
-              font=("Consolas", 10, "bold")).pack(side="right")
+    footer.pack(side="bottom", fill="x", padx=32, pady=(8, 24))
+    tk.Button(footer, text="Got it", command=root.destroy, bg=ACCENT, fg=pal["ACCENT_TEXT"], activebackground=ACCENT,
+              activeforeground=pal["ACCENT_TEXT"], relief="flat", bd=0, highlightthickness=0, padx=28, pady=9,
+              cursor="hand2", font=(UI_FONT, 10, "bold")).pack(side="right")
 
     box = tk.Frame(root, bg=BG)
-    box.pack(fill="both", expand=True, padx=24, pady=10)
-    scroll = tk.Scrollbar(box, orient="vertical")
-    text = tk.Text(box, wrap="word", bg=CARD, fg=TEXT, relief="flat", bd=0, padx=14, pady=10,
-                   font=("Segoe UI", 10), yscrollcommand=scroll.set, cursor="arrow", spacing3=4)
+    box.pack(fill="both", expand=True, padx=32, pady=(14, 0))
+    scroll = tk.Scrollbar(box, orient="vertical", troughcolor=BG, bg=pal["OFF_TRACK"], relief="flat", bd=0,
+                          highlightthickness=0, width=10)
+    text = tk.Text(box, wrap="word", bg=CARD, fg=TEXT, relief="flat", bd=0, padx=20, pady=14,
+                   font=(UI_FONT, 10), yscrollcommand=scroll.set, cursor="arrow", spacing3=5,
+                   highlightthickness=1, highlightbackground=pal["BORDER"], selectbackground=pal["ACCENT_SOFT"])
     scroll.configure(command=text.yview)
     scroll.pack(side="right", fill="y")
     text.pack(side="left", fill="both", expand=True)
-    text.tag_configure("version", font=("Consolas", 13, "bold"), foreground=CYAN, spacing1=10, spacing3=4)
-    text.tag_configure("group", font=("Consolas", 10, "bold"), foreground=ACCENT, spacing1=8)
-    text.tag_configure("item", lmargin1=14, lmargin2=28)
+    text.tag_configure("version", font=(UI_FONT, 15, "bold"), foreground=TEXT, spacing1=10, spacing3=2)
+    text.tag_configure("date", font=(UI_FONT, 9), foreground=MUTED, spacing3=6)
+    text.tag_configure("group", font=(UI_FONT, 9, "bold"), foreground=CYAN, spacing1=10, spacing3=4)
+    text.tag_configure("item", lmargin1=12, lmargin2=26)
     for entry in entries:
-        label = entry["version"] + (f"  ({entry['date']})" if entry["date"] else "")
-        text.insert("end", label + "\n", "version")
+        text.insert("end", entry["version"] + "\n", "version")
+        if entry["date"]:
+            text.insert("end", entry["date"] + "\n", "date")
         for title, items in entry["groups"]:
             text.insert("end", title.upper() + "\n", "group")
             for item in items:
-                text.insert("end", "• " + item + "\n", "item")
+                text.insert("end", "\u2022  " + item + "\n", "item")
     text.configure(state="disabled")
     root.bind("<Escape>", lambda _e: root.destroy())
     root.mainloop()

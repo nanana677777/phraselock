@@ -143,33 +143,31 @@ def run(cfg=None):
     import tkinter as tk
     from tkinter import messagebox
     from appicon import apply_window_icon
+    import uikit
+    from uikit import UI_FONT, RadioCard, Switch
 
     cfg = cfg if cfg is not None else load_config()
-    BG, CARD, TEXT, MUTED, ACCENT, DANGER = "#050507", "#0d0d12", "#f7f7fb", "#9aa0b4", "#ff1744", "#ff5252"
+    pal = uikit.apply_palette("#ff1744", "#00e5ff")
+    BG, CARD, TEXT, MUTED, ACCENT, DANGER = pal["BG"], pal["CARD"], pal["TEXT"], pal["MUTED"], pal["ACCENT"], pal["DANGER"]
     available = packs.list_packs()
 
     root = tk.Tk()
     apply_window_icon(root)
     root.title("PhraseLock - Setup")
-    root.geometry("640x540")
-    root.resizable(False, False)
+    root.geometry("700x680")
+    root.minsize(640, 600)
     root.configure(bg=BG)
+    root.option_add("*Font", f"{{{UI_FONT}}} 10")
     root.option_add("*Frame.Background", BG)
     root.option_add("*Label.Background", BG)
     root.option_add("*Label.Foreground", TEXT)
-    root.option_add("*Radiobutton.Background", BG)
-    root.option_add("*Radiobutton.Foreground", TEXT)
-    root.option_add("*Radiobutton.SelectColor", CARD)
-    root.option_add("*Radiobutton.ActiveBackground", BG)
-    root.option_add("*Radiobutton.ActiveForeground", TEXT)
-    root.option_add("*Checkbutton.Background", BG)
-    root.option_add("*Checkbutton.Foreground", TEXT)
-    root.option_add("*Checkbutton.SelectColor", CARD)
-    root.option_add("*Checkbutton.ActiveBackground", BG)
-    root.option_add("*Checkbutton.ActiveForeground", TEXT)
-    root.option_add("*Entry.Background", CARD)
+    root.option_add("*Entry.Background", pal["INPUT"])
     root.option_add("*Entry.Foreground", TEXT)
     root.option_add("*Entry.InsertBackground", ACCENT)
+    root.option_add("*Entry.Relief", "flat")
+    root.option_add("*Entry.HighlightThickness", 1)
+    root.option_add("*Entry.HighlightBackground", pal["BORDER"])
+    root.option_add("*Entry.HighlightColor", ACCENT)
 
     result = {"cfg": cfg, "finished": False}
     pack_var = tk.StringVar(value=available[0]["id"] if available else "")
@@ -183,64 +181,62 @@ def run(cfg=None):
     step_var = tk.StringVar()
 
     header = tk.Frame(root)
-    header.pack(fill="x", padx=24, pady=(20, 0))
-    tk.Label(header, text="PHRASELOCK SETUP", font=("Consolas", 16, "bold"), fg=ACCENT).pack(anchor="w")
-    tk.Label(header, textvariable=step_var, font=("Consolas", 9), fg=MUTED).pack(anchor="w")
+    header.pack(fill="x", padx=32, pady=(26, 0))
+    tk.Label(header, text="PHRASELOCK SETUP", font=(UI_FONT, 9, "bold"), fg=ACCENT).pack(anchor="w")
+    tk.Label(header, textvariable=step_var, font=(UI_FONT, 10), fg=MUTED).pack(anchor="w", pady=(2, 8))
+    progress = tk.Canvas(header, height=4, bg=BG, highlightthickness=0, bd=0)
+    progress.pack(fill="x")
 
-    body = tk.Frame(root)
-    body.pack(fill="both", expand=True, padx=24, pady=12)
-    error_label = tk.Label(root, textvariable=error_var, font=("Consolas", 9), fg=DANGER, wraplength=580, justify="left")
-    error_label.pack(fill="x", padx=24)
     nav = tk.Frame(root)
-    nav.pack(fill="x", padx=24, pady=(6, 18))
+    nav.pack(side="bottom", fill="x", padx=32, pady=(6, 24))
+    error_label = tk.Label(root, textvariable=error_var, font=(UI_FONT, 9), fg=DANGER, wraplength=620, justify="left")
+    error_label.pack(side="bottom", fill="x", padx=32)
+    body = tk.Frame(root)
+    body.pack(fill="both", expand=True, padx=32, pady=(18, 8))
 
     def title(text):
-        tk.Label(body, text=text, font=("Consolas", 13, "bold")).pack(anchor="w", pady=(0, 6))
+        tk.Label(body, text=text, font=(UI_FONT, 20, "bold")).pack(anchor="w", pady=(0, 6))
 
     def para(text, color=MUTED, size=10):
-        tk.Label(body, text=text, font=("Consolas", size), fg=color, wraplength=580, justify="left").pack(anchor="w", pady=(0, 8))
+        tk.Label(body, text=text, font=(UI_FONT, size), fg=color, wraplength=620, justify="left").pack(
+            anchor="w", pady=(0, 10))
 
     def choice(var, value, label, detail):
-        tk.Radiobutton(body, text=label, variable=var, value=value, font=("Consolas", 11, "bold"),
-                       anchor="w", indicatoron=True).pack(anchor="w")
-        tk.Label(body, text=detail, font=("Consolas", 9), fg=MUTED, wraplength=540, justify="left").pack(
-            anchor="w", padx=(26, 0), pady=(0, 6))
+        RadioCard(body, label, detail, var, value, wraplength=560).pack(fill="x", pady=4)
 
     def page_welcome():
         title("Welcome")
         para("PhraseLock asks you to type a phrase before the computer unlocks. A few quick questions "
-             "set it up for you; everything can be changed later in Settings.")
-        para("This takes about a minute. Nothing is switched on until you press Finish.")
+             "set it up for you; everything can be changed later in Settings.", size=11)
+        para("This takes about a minute. Nothing is switched on until you press Finish.", size=11)
 
     def page_style():
-        title("1. Pick a style")
+        title("Pick a style")
         para("A style sets the phrases, colours, pictures, sounds and wording in one go.")
         for p in available:
             choice(pack_var, p["id"], p["name"], p["description"])
         choice(pack_var, "", "Default look", "The plain PhraseLock look and the built-in phrase.")
 
     def page_difficulty():
-        title("2. How hard should the phrases be?")
+        title("How hard should the phrases be?")
         for key, label, detail in DIFFICULTY_CHOICES:
             choice(difficulty_var, key, label, detail)
 
     def page_rules():
-        title("3. How strict should it be?")
+        title("How strict should it be?")
         for key, label, detail in STRICTNESS_CHOICES:
             choice(strictness_var, key, label, detail)
 
     def page_password():
-        title("4. Emergency password (optional)")
+        title("Emergency password")
         para("A password that unlocks the computer if you ever get stuck. Strongly recommended, and "
              f"needed for a style's protections. At least {MIN_PASSWORD_LENGTH} characters; skip it to set one later.")
-        for text, var in (("Password:", password_var), ("Repeat it:", confirm_var)):
-            row = tk.Frame(body)
-            row.pack(anchor="w", pady=2)
-            tk.Label(row, text=text, width=12, anchor="w", font=("Consolas", 10)).pack(side="left")
-            tk.Entry(row, textvariable=var, show="*", width=28).pack(side="left")
-        tk.Checkbutton(body, text="Also switch on the style's protections (strict mode, idle lock)",
-                       variable=protections_var, font=("Consolas", 10)).pack(anchor="w", pady=(14, 0))
-        para("Only applies when a style and a password are chosen.", size=8)
+        for text, var in (("Password", password_var), ("Repeat it", confirm_var)):
+            tk.Label(body, text=text, font=(UI_FONT, 10), fg=MUTED).pack(anchor="w", pady=(8, 3))
+            tk.Entry(body, textvariable=var, show="*", width=34, font=(UI_FONT, 11)).pack(anchor="w", ipady=5)
+        Switch(body, text="Also switch on the style's protections (strict mode, idle lock)",
+               variable=protections_var).pack(anchor="w", pady=(22, 0))
+        para("Only applies when a style and a password are chosen.", size=9)
 
     def current_choices():
         return {"pack": pack_var.get(), "difficulty": difficulty_var.get(), "strictness": strictness_var.get(),
@@ -249,15 +245,26 @@ def run(cfg=None):
     def page_finish():
         title("All set")
         name = next((p["name"] for p in available if p["id"] == pack_var.get()), None)
+        card = tk.Frame(body, bg=CARD, highlightthickness=1, highlightbackground=pal["BORDER"])
+        card.pack(fill="x", pady=(0, 14))
         for line in summary_lines(current_choices(), name):
-            tk.Label(body, text="- " + line, font=("Consolas", 10), anchor="w", justify="left",
-                     wraplength=580).pack(anchor="w", pady=1)
-        tk.Checkbutton(body, text="Start protecting me now", variable=enabled_var,
-                       font=("Consolas", 10)).pack(anchor="w", pady=(16, 0))
+            tk.Label(card, text=line, font=(UI_FONT, 10), bg=CARD, anchor="w", justify="left",
+                     wraplength=580).pack(anchor="w", padx=16, pady=3)
+        Switch(body, text="Start protecting me now", variable=enabled_var).pack(anchor="w", pady=(4, 0))
         para("Settings opens next, on a simple Home tab. Advanced options stay one click away.", size=9)
 
+    progress.bind("<Configure>", lambda _e: draw_progress(state["i"]))
     pages = [page_welcome, page_style, page_difficulty, page_rules, page_password, page_finish]
     state = {"i": 0}
+
+    def draw_progress(i):
+        progress.delete("all")
+        width = max(progress.winfo_width(), 100)
+        gap, count = 6, len(pages)
+        seg = (width - gap * (count - 1)) / count
+        for n in range(count):
+            x = n * (seg + gap)
+            progress.create_rectangle(x, 0, x + seg, 4, fill=ACCENT if n <= i else pal["OFF_TRACK"], outline="")
 
     def show(i):
         state["i"] = i
@@ -266,18 +273,21 @@ def run(cfg=None):
             child.destroy()
         for child in nav.winfo_children():
             child.destroy()
-        step_var.set("Welcome" if i == 0 else f"Step {i} of {len(pages) - 1}" if i < len(pages) - 1 else "Last step")
+        step_var.set("Welcome" if i == 0 else f"Step {i} of {len(pages) - 2}" if i < len(pages) - 1 else "Last step")
         pages[i]()
 
-        def button(text, command, primary=False):
-            tk.Button(nav, text=text, command=command, bg=ACCENT if primary else CARD, fg="white" if primary else TEXT,
-                      activebackground=ACCENT, activeforeground="white", relief="flat", bd=0, padx=18, pady=7,
-                      cursor="hand2", font=("Consolas", 10, "bold")).pack(side="right" if primary else "left", padx=(0, 8))
+        def button(text, command, primary=False, side="left", muted=False):
+            tk.Button(nav, text=text, command=command, bg=ACCENT if primary else (BG if muted else pal["CARD_ALT"]),
+                      fg=pal["ACCENT_TEXT"] if primary else (MUTED if muted else TEXT),
+                      activebackground=ACCENT, activeforeground=pal["ACCENT_TEXT"], relief="flat", bd=0,
+                      highlightthickness=0, padx=22, pady=9, cursor="hand2",
+                      font=(UI_FONT, 10, "bold")).pack(side=side, padx=(0, 8))
 
+        button("Finish" if i == len(pages) - 1 else "Next", on_next, primary=True, side="right")
         if i > 0:
-            button("Back", lambda: show(i - 1))
-        button("Skip setup", on_skip)
-        button("Finish" if i == len(pages) - 1 else "Next", on_next, primary=True)
+            button("Back", lambda: show(i - 1), side="right")
+        button("Skip setup", on_skip, muted=True)
+        draw_progress(i)
 
     def on_next():
         i = state["i"]

@@ -8,6 +8,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Lock-screen info switches.** *Settings > Look > Lock-screen info* turns on or off the round counter, the first-try streak line and the daily goal / level / XP line shown under the phrase. The typing challenge itself is unchanged. New settings `show_round_counter`, `show_streak_line`, `show_goal_line` (all on by default; packs never change them).
 - **"What's new?" window.** After an update, the next time you open Settings a window lists what changed since the version you last saw (read from `CHANGELOG.md`, now bundled in the .exe) and remembers it. A fresh install does not see it. *Settings > Home > What's new?* opens it any time. New `version.py` (bump it when you release; "[Unreleased]" entries are shown under that version), `whatsnew.py` and setting `last_seen_version`.
 - **Window title follows the style, and you can make your own packs.** The Settings header now reads `app_kicker` / `app_title` from the active pack (TechDom: "TECHDOM / DISCIPLINE PROTOCOL", PetDom: "PETDOM / GOOD PET PROTOCOL", no pack: "PHRASELOCK / DISCIPLINE PROTOCOL"). Packs in `%APPDATA%\PhraseLock\packs\<name>\pack.json` are now listed and applied like the shipped ones, and *Settings > Look > Save my settings as a pack...* creates one from your current settings (phrase, sound and background files are copied in; no password or schedule is ever copied).
 - **First-launch setup wizard.** The first time PhraseLock is opened (no config file yet) a five-step wizard asks for a style (theme pack or default look), a difficulty, how strict to be (keep the style's rules, gentle, standard or strict), an optional emergency password (and, with it, the style's protections) and whether to start protecting right away. Your answers win over the pack's defaults. It can be skipped, and run again from *Settings > Home*. New modules/settings: `wizard.py`, `setup_done`, `advanced_view`.
@@ -80,6 +81,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
   at the same moment as the main one instead of staying covered until the sound ends.
 
 ### Changed
+- **Settings window redesign.** A sidebar replaces the tab strip (Home, Phrases, Look, Rules, Protection, Stats) with the style's name on top; the page title and the on/off switch sit in a top bar. Toggle switches replace check boxes, flat dropdowns replace the old option menus, sections have clean titles with a thin rule, and the whole window uses a calmer dark palette in a modern font (Segoe UI) whose accent colour follows the active theme (TechDom cyan, PetDom amber...). The setup wizard (selectable cards, progress bar) and the "What's new?" window got the same look. Dropdowns no longer change when you scroll over them. New module `uikit.py`.
 - If a ticked monitor is unplugged it is skipped, and the primary screen is used when
   none of the ticked monitors is left. The saved choice is kept.
 - The hidden standby lock rebuilds itself when the monitor layout changes.

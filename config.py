@@ -86,6 +86,9 @@ DEFAULT_CONFIG = {
     "manual_lock_hotkey": "",
     "pause_hotkey": "",          # e.g. "Ctrl+Alt+P": pause PhraseLock / resume, without the challenge ("" = off)
     "pause_minutes": 15,         # how long the hotkey pauses for
+    "show_round_counter": True,  # lock screen: "[COMPLIANCE] 0 / 1 CONFIRMED" style round counter
+    "show_streak_line": True,    # lock screen: first-try streak line
+    "show_goal_line": True,      # lock screen: daily goal, level and XP line
     "ui_texts": {},              # lock-screen wording set by a theme pack (see themes.py); {} = built-in texts
 }
 

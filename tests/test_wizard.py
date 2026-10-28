@@ -42,6 +42,11 @@ class ShouldRunTests(WizardTestCase):
         self.assertFalse(wizard.should_run({**DEFAULT_CONFIG, "setup_done": True},
                                            os.path.join(self.tmp.name, "config.json")))
 
+    def test_lock_screen_info_lines_are_on_by_default_and_not_pack_settings(self):
+        for key in ("show_round_counter", "show_streak_line", "show_goal_line"):
+            self.assertIs(DEFAULT_CONFIG[key], True)
+            self.assertNotIn(key, packs.APPLY_KEYS | packs.PROTECTION_KEYS)
+
     def test_defaults_keep_existing_users_on_the_full_view(self):
         self.assertIs(DEFAULT_CONFIG["advanced_view"], True)
         self.assertIs(DEFAULT_CONFIG["setup_done"], False)

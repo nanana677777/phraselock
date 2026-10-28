@@ -23,8 +23,10 @@ import media
 import hotkeys
 import packs
 import themes
+import uikit
 import whatsnew
 import wizard
+from uikit import Switch, Dropdown, UI_FONT
 from version import __version__
 
 CONFIG_DIR = phrase_lock.CONFIG_DIR
@@ -181,26 +183,20 @@ def main(start_tab=None):
     root = tk.Tk()
     apply_window_icon(root)
     root.title("PhraseLock - Settings")
-    root.geometry("760x820")
-    root.minsize(680, 560)
+    root.geometry("980x780")
+    root.minsize(860, 560)
 
-    # TechDom visual system: dark control-console aesthetic with sharp neon accents.
-    UI_BG = "#050507"
-    CARD_BG = "#0d0d12"
-    CARD_ALT = "#14141b"
-    TEXT = "#f7f7fb"
-    MUTED = "#777785"
-    ACCENT = "#ff1744"
-    ACCENT_2 = "#b400ff"
-    CYAN = "#00e5ff"
-    INPUT_BG = "#08080c"
-    BAD_BG = "#2a0b12"
-    BORDER = "#272732"
-    DANGER = "#ff1744"
-    WARN = "#ffb86b"
+    # Palette: follows the active theme's accent colour (TechDom cyan, PetDom amber, ...).
+    accent, accent2, _third = themes.theme_colors(str(cfg.get("theme", "Cyber Red")), cfg)
+    pal = uikit.apply_palette(accent, accent2)
+    UI_BG, CARD_BG, CARD_ALT = pal["BG"], pal["CARD"], pal["CARD_ALT"]
+    SIDEBAR_BG, TEXT, MUTED = pal["SIDEBAR"], pal["TEXT"], pal["MUTED"]
+    ACCENT, ACCENT_2, CYAN, ACCENT_TEXT = pal["ACCENT"], pal["ACCENT2"], pal["ACCENT2"], pal["ACCENT_TEXT"]
+    INPUT_BG, BAD_BG, BORDER = pal["INPUT"], pal["BAD_BG"], pal["BORDER"]
+    DANGER, WARN, OK = pal["DANGER"], pal["WARN"], pal["OK"]
 
     root.configure(bg=UI_BG)
-    root.option_add("*Font", "{Bahnschrift} 10")
+    root.option_add("*Font", f"{{{UI_FONT}}} 10")
     root.option_add("*Background", UI_BG)
     root.option_add("*Foreground", TEXT)
     root.option_add("*Label.Background", UI_BG)
@@ -209,64 +205,78 @@ def main(start_tab=None):
     root.option_add("*Button.Background", CARD_ALT)
     root.option_add("*Button.Foreground", TEXT)
     root.option_add("*Button.ActiveBackground", ACCENT)
-    root.option_add("*Button.ActiveForeground", "white")
+    root.option_add("*Button.ActiveForeground", ACCENT_TEXT)
     root.option_add("*Button.Relief", "flat")
     root.option_add("*Button.BorderWidth", 0)
-    root.option_add("*Entry.Background", INPUT_BG)
-    root.option_add("*Entry.Foreground", TEXT)
+    root.option_add("*Button.HighlightThickness", 0)
+    root.option_add("*Button.PadX", 14)
+    root.option_add("*Button.PadY", 6)
+    root.option_add("*Button.Cursor", "hand2")
+    for widget in ("Entry", "Spinbox", "Text", "Listbox"):
+        root.option_add(f"*{widget}.DisabledBackground", INPUT_BG)
+        root.option_add(f"*{widget}.DisabledForeground", MUTED)
+        root.option_add(f"*{widget}.Background", INPUT_BG)
+        root.option_add(f"*{widget}.Foreground", TEXT)
+        root.option_add(f"*{widget}.Relief", "flat")
+        root.option_add(f"*{widget}.HighlightThickness", 1)
+        root.option_add(f"*{widget}.HighlightBackground", BORDER)
+        root.option_add(f"*{widget}.HighlightColor", ACCENT)
     root.option_add("*Entry.InsertBackground", ACCENT)
-    root.option_add("*Text.Background", INPUT_BG)
-    root.option_add("*Text.Foreground", TEXT)
-    root.option_add("*Checkbutton.Background", UI_BG)
-    root.option_add("*Checkbutton.Foreground", TEXT)
-    root.option_add("*Checkbutton.SelectColor", ACCENT)
+    root.option_add("*Text.InsertBackground", ACCENT)
+    root.option_add("*Spinbox.InsertBackground", ACCENT)
+    root.option_add("*Spinbox.ButtonBackground", CARD_ALT)
+    root.option_add("*Listbox.SelectBackground", ACCENT)
+    root.option_add("*Listbox.SelectForeground", ACCENT_TEXT)
+    root.option_add("*Text.SelectBackground", ACCENT)
+    root.option_add("*Text.SelectForeground", ACCENT_TEXT)
     root.option_add("*Scale.Background", UI_BG)
     root.option_add("*Scale.TroughColor", BORDER)
-    root.option_add("*Scale.Activebackground", ACCENT)
+    root.option_add("*Scale.ActiveBackground", ACCENT)
+    root.option_add("*Scale.Relief", "flat")
+    root.option_add("*Scale.BorderWidth", 0)
+    root.option_add("*Scale.HighlightThickness", 0)
+    style = uikit.style_ttk(root)
 
-    # ttk (tabs + scrollbars) styled to match
-    style = ttk.Style(root)
-    try:
-        style.theme_use("clam")
-    except tk.TclError:
-        pass
-    style.configure("TNotebook", background=UI_BG, borderwidth=0, tabmargins=(0, 0, 0, 0))
-    style.configure("TNotebook.Tab", background=CARD_ALT, foreground=MUTED,
-                    padding=(20, 9), font=("Consolas", 10, "bold"), borderwidth=0)
-    style.map("TNotebook.Tab",
-              background=[("selected", CARD_BG), ("active", "#1b1b25")],
-              foreground=[("selected", CYAN), ("active", TEXT)])
-    style.configure("Vertical.TScrollbar", background=CARD_ALT, troughcolor=UI_BG,
-                    bordercolor=UI_BG, lightcolor=CARD_ALT, darkcolor=CARD_ALT,
-                    arrowcolor=MUTED)
-    style.map("Vertical.TScrollbar", background=[("active", ACCENT)])
+    # ----------------------------------------------------------------- layout
+    # [ sidebar: style name + page list ] [ top bar / page / save bar ]
+    sidebar = tk.Frame(root, bg=SIDEBAR_BG, width=224)
+    sidebar.pack(side="left", fill="y")
+    sidebar.pack_propagate(False)
+    page_area = tk.Frame(root, bg=UI_BG)
+    page_area.pack(side="left", fill="both", expand=True)
 
-    # ---------------------------------------------------------------- header
-    header = tk.Frame(root, bg=UI_BG, highlightthickness=1, highlightbackground=BORDER)
-    header.pack(fill="x", padx=12, pady=(12, 6))
-    tk.Label(header, text=themes.ui_text(cfg, "app_kicker", "// PHRASELOCK :: CONTROL NODE"), font=("Consolas", 9, "bold"), fg=CYAN, bg=UI_BG).pack(anchor="w", padx=14, pady=(8, 0))
-    tk.Label(header, text=themes.ui_text(cfg, "app_title", "PHRASELOCK / DISCIPLINE PROTOCOL"), font=("Bahnschrift", 18, "bold"), fg=TEXT, bg=UI_BG).pack(anchor="w", padx=14, pady=(0, 8))
+    brand = tk.Frame(sidebar, bg=SIDEBAR_BG)
+    brand.pack(fill="x", padx=20, pady=(24, 18))
+    tk.Label(brand, text=themes.ui_text(cfg, "app_kicker", "// PHRASELOCK :: CONTROL NODE"),
+             font=(UI_FONT, 8, "bold"), fg=ACCENT, bg=SIDEBAR_BG, wraplength=180, justify="left").pack(anchor="w")
+    tk.Label(brand, text=themes.ui_text(cfg, "app_title", "PHRASELOCK / DISCIPLINE PROTOCOL"),
+             font=(UI_FONT, 15, "bold"), fg=TEXT, bg=SIDEBAR_BG, wraplength=180, justify="left").pack(anchor="w", pady=(6, 0))
+    nav_holder = tk.Frame(sidebar, bg=SIDEBAR_BG)
+    nav_holder.pack(fill="x", padx=8)
+    tk.Label(sidebar, text=f"PhraseLock {__version__}", font=(UI_FONT, 8), fg=MUTED,
+             bg=SIDEBAR_BG).pack(side="bottom", anchor="w", padx=20, pady=14)
 
     # Master activation toggle: controls whether PhraseLock appears after a
     # Windows unlock. Preview/Settings stay usable while disabled.
     enabled_var = tk.BooleanVar(value=cfg.get("enabled", True))
     status_var = tk.StringVar()
+    page_title_var = tk.StringVar()
 
-    toggle_frame = tk.Frame(root, bg=CARD_BG, highlightthickness=1, highlightbackground=BORDER)
-    toggle_frame.pack(fill="x", padx=12, pady=(0, 6), ipady=4)
-    tk.Label(toggle_frame, text="SYSTEM STATUS", font=("Consolas", 9, "bold"), fg=MUTED, bg=CARD_BG).pack(side="left", padx=(14, 8))
-    toggle_btn = tk.Button(toggle_frame, width=14, font=("Consolas", 10, "bold"),
-                           relief="flat", bd=0, cursor="hand2", padx=10, pady=4)
-    toggle_btn.pack(side="right", padx=12)
-    tk.Label(toggle_frame, textvariable=status_var, font=("Consolas", 9), fg=TEXT, bg=CARD_BG).pack(side="left", padx=(4, 0))
+    topbar = tk.Frame(page_area, bg=UI_BG)
+    topbar.pack(fill="x", padx=28, pady=(20, 6))
+    tk.Label(topbar, textvariable=page_title_var, font=(UI_FONT, 22, "bold"), fg=TEXT, bg=UI_BG).pack(side="left")
+    toggle_btn = tk.Button(topbar, width=12, font=(UI_FONT, 10, "bold"), relief="flat", bd=0, cursor="hand2",
+                           padx=10, pady=6)
+    toggle_btn.pack(side="right")
+    tk.Label(topbar, textvariable=status_var, font=(UI_FONT, 9), fg=MUTED, bg=UI_BG).pack(side="right", padx=(0, 14))
 
     def refresh_enabled_ui():
         if enabled_var.get():
-            status_var.set("PhraseLock is active on Windows unlock")
-            toggle_btn.configure(text="●  ENABLED", bg="#19e68c", fg="#04110a", activebackground="#39ffab")
+            status_var.set("Locks after every Windows unlock")
+            toggle_btn.configure(text="●  On", bg=OK, fg="#04110a", activebackground="#5df2b8", activeforeground="#04110a")
         else:
-            status_var.set("PhraseLock is disabled on Windows unlock")
-            toggle_btn.configure(text="○  DISABLED", bg="#2b2b35", fg="#ff6b81", activebackground="#3a3a46")
+            status_var.set("Switched off")
+            toggle_btn.configure(text="○  Off", bg=pal["OFF_TRACK"], fg=DANGER, activebackground=BORDER, activeforeground=DANGER)
 
     def toggle_enabled():
         enabled_var.set(not enabled_var.get())
@@ -275,12 +285,14 @@ def main(start_tab=None):
     toggle_btn.configure(command=toggle_enabled)
     refresh_enabled_ui()
 
-    # Footer is packed BEFORE the notebook so it always keeps its space.
-    footer = tk.Frame(root, bg=CARD_BG, highlightthickness=1, highlightbackground=BORDER)
-    footer.pack(side="bottom", fill="x", padx=12, pady=(0, 12))
+    # Footer is packed BEFORE the pages so it always keeps its space.
+    footer = tk.Frame(page_area, bg=CARD_BG, highlightthickness=1, highlightbackground=BORDER)
+    footer.pack(side="bottom", fill="x", padx=28, pady=(6, 18))
 
-    notebook = ttk.Notebook(root)
-    notebook.pack(fill="both", expand=True, padx=12, pady=(0, 8))
+    notebook = uikit.SideNav(page_area, nav_holder)
+    notebook.pack(fill="both", expand=True, padx=(8, 20), pady=(0, 4))
+    PAGE_ICONS = {"home": "⌂", "phrases": "✎", "look": "◐", "rules": "☰",
+                  "protection": "⚑", "stats": "▤"}
 
     # ------------------------------------------------ scrollable tab plumbing
     tab_canvases = {}   # str(tab widget) -> its scroll canvas
@@ -297,7 +309,7 @@ def main(start_tab=None):
         cv.configure(yscrollcommand=sb.set)
         cv.pack(side="left", fill="both", expand=True)
         sb.pack(side="right", fill="y")
-        notebook.add(outer, text=title)
+        notebook.add(outer, text=title, icon=PAGE_ICONS.get(key, ""))
         tab_canvases[str(outer)] = cv
         tab_by_key[key] = outer
         return inner
@@ -322,12 +334,29 @@ def main(start_tab=None):
     def pad(widget, **kw):
         widget.pack(anchor="w", padx=20, **kw)
 
-    def heading(parent, text, color=ACCENT_2):
-        tk.Label(parent, text=text, font=("Consolas", 12, "bold"), fg=color, bg=UI_BG).pack(anchor="w", padx=20, pady=(16, 5))
+    HEADINGS = {
+        "DISPLAYED TITLE": "Lock-screen title", "PHRASE PROTOCOL": "Phrases", "THEME PACK": "Theme pack",
+        "THEME / HUD": "Theme and interface", "BACKGROUND / PANEL": "Background and panel", "AUDIO": "Sounds",
+        "CHALLENGE": "Challenge", "INPUT CONTROL": "Typing rules", "CHALLENGE LIMITS": "Attempts and lockout",
+        "DAILY GOAL": "Daily goal", "SCHEDULE MATRIX": "Schedule", "FOCUS SESSION": "Focus session",
+        "IDLE LOCK": "Idle lock", "EMERGENCY OVERRIDE": "Emergency password",
+        "WATCHDOG / AUTO-PROTECTION": "Auto-protection", "PAUSE / PANIC": "Pause",
+        "BOOT SEQUENCE": "Start with Windows", "LOCK SCREEN INFO": "Lock-screen info", "QUICK START": "Quick start",
+    }
+
+    def heading(parent, text, color=None):
+        """Section title with a thin rule above it. '[01] THEME / HUD' -> 'Theme and interface'."""
+        plain = re.sub(r"^\[\w+\]\s*", "", text)
+        label = HEADINGS.get(plain, plain.capitalize())
+        first = not parent.winfo_children()
+        if not first:
+            tk.Frame(parent, height=1, bg=BORDER).pack(fill="x", padx=20, pady=(22, 0))
+        tk.Label(parent, text=label, font=(UI_FONT, 13, "bold"), fg=color or TEXT, bg=UI_BG).pack(
+            anchor="w", padx=20, pady=(6 if not first else 4, 8))
 
     def note(parent, text, color=MUTED, size=9):
-        tk.Label(parent, text=text, font=("Consolas", size), fg=color, wraplength=620,
-                 justify="left").pack(anchor="w", padx=20, pady=(0, 8))
+        tk.Label(parent, text=text, font=(UI_FONT, size), fg=color, wraplength=640,
+                 justify="left").pack(anchor="w", padx=20, pady=(0, 10))
 
     def style_entry(entry, ok):
         entry.configure(bg=INPUT_BG if ok else BAD_BG,
@@ -338,7 +367,7 @@ def main(start_tab=None):
     # ======================================================================
     # TAB 1: PHRASES
     # ======================================================================
-    t_phrases = new_tab("phrases", "  Phrases  ")
+    t_phrases = new_tab("phrases", "Phrases")
 
     title_var = tk.StringVar(value=cfg.get("title", DEFAULT_CONFIG["title"]))
     heading(t_phrases, "[01] DISPLAYED TITLE")
@@ -377,12 +406,12 @@ def main(start_tab=None):
 
     difficulty_var = tk.StringVar(value=str(cfg.get("difficulty", "all")))
     pad(tk.Label(t_phrases, text="Phrase difficulty filter (needs a CSV/JSON file with a difficulty column):"), pady=(0, 3))
-    pad(tk.OptionMenu(t_phrases, difficulty_var, "all", "easy", "normal", "hard", "extreme"), pady=(0, 16))
+    pad(Dropdown(t_phrases, difficulty_var, "all", "easy", "normal", "hard", "extreme"), pady=(0, 16))
 
     # ======================================================================
     # TAB 2: LOOK (+ audio)
     # ======================================================================
-    t_look = new_tab("look", "  Look  ")
+    t_look = new_tab("look", "Look")
 
     heading(t_look, "[00] THEME PACK")
     note(t_look, "A pack sets phrases, theme, background images, sounds, interface texts and challenge rules "
@@ -401,12 +430,12 @@ def main(start_tab=None):
         pack_desc_var.set("")
 
     if available_packs:
-        pad(tk.OptionMenu(t_look, pack_choice_var, *[p["name"] for p in available_packs]), pady=(0, 4))
+        pad(Dropdown(t_look, pack_choice_var, *[p["name"] for p in available_packs]), pady=(0, 4))
         pack_choice_var.trace_add("write", refresh_pack_description)
         refresh_pack_description()
-        pad(tk.Label(t_look, textvariable=pack_desc_var, font=("Consolas", 9), fg=MUTED,
+        pad(tk.Label(t_look, textvariable=pack_desc_var, font=(UI_FONT, 9), fg=MUTED,
                      wraplength=620, justify="left"), pady=(0, 6))
-        pad(tk.Checkbutton(t_look, text="Also enable the pack's protections (strict mode, idle lock...) "
+        pad(Switch(t_look, text="Also enable the pack's protections (strict mode, idle lock...) "
                                         "- needs an emergency password", variable=pack_protect_var), pady=(0, 6))
         pack_btns = tk.Frame(t_look)
         pack_btns.pack(anchor="w", padx=20, pady=(0, 6))
@@ -429,7 +458,7 @@ def main(start_tab=None):
     custom_state = {"themes": themes.custom_themes(cfg)}      # name -> [primary, secondary, third]
     custom_json_var = tk.StringVar(value=json.dumps(custom_state["themes"], sort_keys=True))
     pad(tk.Label(t_look, text="Theme:"), pady=(0, 3))
-    theme_menu = tk.OptionMenu(t_look, theme_var, *themes.theme_names(cfg))
+    theme_menu = Dropdown(t_look, theme_var, *themes.theme_names(cfg))
     pad(theme_menu, pady=(0, 4))
 
     # ---- theme editor: create, rename, duplicate and delete your own themes ----
@@ -446,10 +475,7 @@ def main(start_tab=None):
         return list(themes.THEMES) + sorted(custom_state["themes"], key=str.lower)
 
     def rebuild_theme_menu():
-        menu = theme_menu["menu"]
-        menu.delete(0, "end")
-        for name in theme_name_list():
-            menu.add_command(label=name, command=lambda v=name: theme_var.set(v))
+        theme_menu["values"] = theme_name_list()
 
     def commit_custom():
         custom_json_var.set(json.dumps(custom_state["themes"], sort_keys=True))   # wakes the autosave
@@ -595,12 +621,12 @@ def main(start_tab=None):
         colour_entries.append(entry)
         colour_buttons.append(button)
         colour_vars[i].trace_add("write", lambda *_a, i=i: on_colour_edit(i))
-    pad(tk.Label(t_look, textvariable=editor_msg_var, font=("Consolas", 8), fg=MUTED), pady=(0, 8))
+    pad(tk.Label(t_look, textvariable=editor_msg_var, font=(UI_FONT, 8), fg=MUTED), pady=(0, 8))
     theme_var.trace_add("write", refresh_editor)
     refresh_editor()
     font_var = tk.StringVar(value=str(cfg.get("font_family", "Consolas")))
     pad(tk.Label(t_look, text="Interface font:"), pady=(0, 3))
-    pad(tk.OptionMenu(t_look, font_var, "Consolas", "Bahnschrift", "Segoe UI", "Courier New"), pady=(0, 8))
+    pad(Dropdown(t_look, font_var, "Consolas", "Bahnschrift", "Segoe UI", "Courier New"), pady=(0, 8))
     ui_scale_var = tk.IntVar(value=max(75, min(150, int(cfg.get("ui_scale", 100) or 100))))
     scale_label_var = tk.StringVar(value=f"UI scale: {ui_scale_var.get()}%")
     pad(tk.Label(t_look, textvariable=scale_label_var), pady=(0, 3))
@@ -610,9 +636,9 @@ def main(start_tab=None):
     scanlines_var = tk.BooleanVar(value=cfg.get("scanlines", True))
     glow_var = tk.BooleanVar(value=cfg.get("glow_effect", True))
     glitch_var = tk.BooleanVar(value=cfg.get("glitch_effect", False))
-    pad(tk.Checkbutton(t_look, text="Scanline overlay", variable=scanlines_var))
-    pad(tk.Checkbutton(t_look, text="Neon glow accents", variable=glow_var))
-    pad(tk.Checkbutton(t_look, text="Glitch effect on errors", variable=glitch_var), pady=(0, 6))
+    pad(Switch(t_look, text="Scanline overlay", variable=scanlines_var))
+    pad(Switch(t_look, text="Neon glow accents", variable=glow_var))
+    pad(Switch(t_look, text="Glitch effect on errors", variable=glitch_var), pady=(0, 6))
 
     heading(t_look, "[02] BACKGROUND / PANEL")
     pad(tk.Label(t_look, text="Background images (optional - local files OR direct HTTP/HTTPS URLs):"))
@@ -676,19 +702,19 @@ def main(start_tab=None):
                  "(it must return the image itself, not a webpage).", size=8)
     pad(tk.Frame(t_look, height=6))
     bg_per_screen_var = tk.BooleanVar(value=bool(cfg.get("background_per_screen", False)))
-    pad(tk.Checkbutton(t_look, text="Show a different random picture on each screen",
+    pad(Switch(t_look, text="Show a different random picture on each screen",
                        variable=bg_per_screen_var), pady=(0, 2))
     note(t_look, "Only matters when several screens are locked. Each screen gets its own picture "
                  "when there are enough images; otherwise some pictures are reused.", size=8)
     animate_gif_var = tk.BooleanVar(value=bool(cfg.get("animate_gif_backgrounds", True)))
-    pad(tk.Checkbutton(t_look, text="Play animated GIF backgrounds",
+    pad(Switch(t_look, text="Play animated GIF backgrounds",
                        variable=animate_gif_var), pady=(0, 2))
     note(t_look, "Add a .gif file or a direct .gif URL to the background list above. While the lock "
                  "is showing, the GIF plays on every locked screen. Turn this off to show only its "
                  "first frame (uses less CPU). Very large GIFs are shrunk or cut to save memory.", size=8)
     bg_mode_var = tk.StringVar(value=str(cfg.get("background_mode", "fill")).capitalize())
     pad(tk.Label(t_look, text="Image display mode (default for all screens):"), pady=(0, 3))
-    pad(tk.OptionMenu(t_look, bg_mode_var, "Fill", "Fit", "Stretch", "Center", "Tile"), pady=(0, 4))
+    pad(Dropdown(t_look, bg_mode_var, "Fill", "Fit", "Stretch", "Center", "Tile"), pady=(0, 4))
     note(t_look, "Fill: cover the screen, crop the overflow. Fit: whole image visible, bars around it. "
                  "Stretch: distorts. Center: original size. Tile: repeat.", size=8)
     # ---- lock screens (multi-monitor) ----
@@ -730,7 +756,7 @@ def main(start_tab=None):
         finally:
             screen_guard["busy"] = False
 
-    pad(tk.Checkbutton(t_look, text="All screens (includes monitors plugged in later)",
+    pad(Switch(t_look, text="All screens (includes monitors plugged in later)",
                        variable=all_screens_var), pady=(0, 2))
     saved_modes = cfg.get("screen_background_modes")
     saved_modes = saved_modes if isinstance(saved_modes, dict) else {}
@@ -740,12 +766,12 @@ def main(start_tab=None):
         screen_vars[m["device"]] = v
         row = tk.Frame(t_look)
         row.pack(anchor="w", padx=20, pady=(0, 1))
-        tk.Checkbutton(row, text=monitors.monitor_label(m, n), variable=v).pack(side="left")
+        Switch(row, text=monitors.monitor_label(m, n), variable=v).pack(side="left")
         saved_mode = str(saved_modes.get(m["device"], "")).lower()
         mv = tk.StringVar(value=saved_mode.capitalize() if saved_mode in monitors.BACKGROUND_MODES else "Default")
         mode_vars[m["device"]] = mv
         tk.Label(row, text="   Image mode:").pack(side="left")
-        tk.OptionMenu(row, mv, "Default", "Fill", "Fit", "Stretch", "Center", "Tile").pack(side="left")
+        Dropdown(row, mv, "Default", "Fill", "Fit", "Stretch", "Center", "Tile").pack(side="left")
     all_screens_var.trace_add("write", on_all_toggled)
     for v in screen_vars.values():
         v.trace_add("write", on_screen_toggled)
@@ -788,7 +814,7 @@ def main(start_tab=None):
 
     tk.Button(color_frame, text="Choose...", command=choose_color).pack(side="left", padx=(8, 0))
     color_hint_var = tk.StringVar()
-    color_hint = tk.Label(t_look, textvariable=color_hint_var, font=("Consolas", 8), fg=DANGER)
+    color_hint = tk.Label(t_look, textvariable=color_hint_var, font=(UI_FONT, 8), fg=DANGER)
     pad(color_hint, pady=(0, 10))
 
     def validate_color(*_):
@@ -809,11 +835,21 @@ def main(start_tab=None):
              command=lambda v: opacity_label_var.set(f"Opacity: {panel_opacity_var.get()}%"),
              length=260, showvalue=False, resolution=1).pack(side="left", padx=(12, 0))
 
-    heading(t_look, "[03] AUDIO")
+    heading(t_look, "[03] LOCK SCREEN INFO")
+    note(t_look, "Choose which extra lines appear under the phrase on the lock screen. "
+                 "Turning them off never changes the challenge itself.")
+    show_round_var = tk.BooleanVar(value=cfg.get("show_round_counter", True))
+    show_streak_var = tk.BooleanVar(value=cfg.get("show_streak_line", True))
+    show_goal_var = tk.BooleanVar(value=cfg.get("show_goal_line", True))
+    pad(Switch(t_look, text="Round counter (how many phrases are done)", variable=show_round_var))
+    pad(Switch(t_look, text="First-try streak", variable=show_streak_var))
+    pad(Switch(t_look, text="Daily goal, level and XP", variable=show_goal_var), pady=(0, 6))
+
+    heading(t_look, "[04] AUDIO")
     play_sound_var = tk.BooleanVar(value=cfg.get("play_sound", False))
-    pad(tk.Checkbutton(t_look, text="Play a sound when successfully unlocked", variable=play_sound_var))
+    pad(Switch(t_look, text="Play a sound when successfully unlocked", variable=play_sound_var))
     sound_error_var = tk.BooleanVar(value=cfg.get("sound_on_error", False))
-    pad(tk.Checkbutton(t_look, text="Play an error sound on a typo", variable=sound_error_var), pady=(0, 6))
+    pad(Switch(t_look, text="Play an error sound on a typo", variable=sound_error_var), pady=(0, 6))
 
     success_sound_var = tk.StringVar(value=cfg.get("success_sound", ""))
     error_sound_var = tk.StringVar(value=cfg.get("error_sound", ""))
@@ -864,24 +900,24 @@ def main(start_tab=None):
     # ======================================================================
     # TAB 3: RULES
     # ======================================================================
-    t_rules = new_tab("rules", "  Rules  ")
+    t_rules = new_tab("rules", "Rules")
 
     heading(t_rules, "[01] CHALLENGE")
     repeats_var = tk.IntVar(value=cfg.get("required_repeats", 1))
     pad(tk.Label(t_rules, text="Number of rounds (each with a random sentence):"))
     pad(tk.Spinbox(t_rules, from_=1, to=20, textvariable=repeats_var, width=5), pady=(0, 8))
     reset_on_error_var = tk.BooleanVar(value=cfg.get("reset_on_error", True))
-    pad(tk.Checkbutton(t_rules, text="Reset the counter to 0 on a typo", variable=reset_on_error_var))
+    pad(Switch(t_rules, text="Reset the counter to 0 on a typo", variable=reset_on_error_var))
     strict_mode_var = tk.BooleanVar(value=cfg.get("strict_mode", False))
-    pad(tk.Checkbutton(t_rules, text="Strict Mode: any typo resets the whole challenge", variable=strict_mode_var))
+    pad(Switch(t_rules, text="Strict Mode: any typo resets the whole challenge", variable=strict_mode_var))
     weighting_var = tk.BooleanVar(value=cfg.get("difficulty_weighting", True))
-    pad(tk.Checkbutton(t_rules, text="Weight phrase selection by difficulty "
+    pad(Switch(t_rules, text="Weight phrase selection by difficulty "
                                     "(easy=1, normal=2, hard=3, extreme=4)", variable=weighting_var), pady=(0, 6))
     heading(t_rules, "[02] INPUT CONTROL")
     disable_paste_var = tk.BooleanVar(value=cfg.get("disable_paste", False))
-    pad(tk.Checkbutton(t_rules, text="Disable paste (force the sentence to be typed manually)", variable=disable_paste_var))
+    pad(Switch(t_rules, text="Disable paste (force the sentence to be typed manually)", variable=disable_paste_var))
     case_insensitive_var = tk.BooleanVar(value=cfg.get("case_insensitive", False))
-    pad(tk.Checkbutton(t_rules, text="Ignore case and accents when checking", variable=case_insensitive_var), pady=(0, 8))
+    pad(Switch(t_rules, text="Ignore case and accents when checking", variable=case_insensitive_var), pady=(0, 8))
     min_delay_var = tk.IntVar(value=cfg.get("min_delay_seconds", 0))
     pad(tk.Label(t_rules, text="Minimum delay before Submit is enabled (seconds):"))
     pad(tk.Spinbox(t_rules, from_=0, to=60, textvariable=min_delay_var, width=5), pady=(0, 6))
@@ -901,7 +937,7 @@ def main(start_tab=None):
 
     heading(t_rules, "[05] SCHEDULE MATRIX")
     schedule_enabled_var = tk.BooleanVar(value=cfg.get("schedule_enabled", False))
-    pad(tk.Checkbutton(t_rules, text="Only trigger the lock during specific days/hours", variable=schedule_enabled_var), pady=(0, 5))
+    pad(Switch(t_rules, text="Only trigger the lock during specific days/hours", variable=schedule_enabled_var), pady=(0, 5))
 
     days_frame = tk.Frame(t_rules)
     days_frame.pack(anchor="w", padx=20, pady=(0, 8))
@@ -910,7 +946,7 @@ def main(start_tab=None):
     for i, label in enumerate(DAY_LABELS):
         v = tk.BooleanVar(value=i in configured_days)
         day_vars.append(v)
-        tk.Checkbutton(days_frame, text=label, variable=v).grid(row=0, column=i, padx=4)
+        Switch(days_frame, text=label, variable=v).grid(row=0, column=i, padx=4)
 
     time_frame = tk.Frame(t_rules)
     time_frame.pack(anchor="w", padx=20, pady=(0, 4))
@@ -924,7 +960,7 @@ def main(start_tab=None):
     end_entry.pack(side="left", padx=(5, 0))
 
     schedule_hint_var = tk.StringVar()
-    schedule_hint = tk.Label(t_rules, textvariable=schedule_hint_var, font=("Consolas", 9), fg=MUTED,
+    schedule_hint = tk.Label(t_rules, textvariable=schedule_hint_var, font=(UI_FONT, 9), fg=MUTED,
                              wraplength=620, justify="left")
     pad(schedule_hint, pady=(0, 6))
 
@@ -959,7 +995,7 @@ def main(start_tab=None):
 
     heading(t_rules, "[06] FOCUS SESSION")
     focus_enabled_var = tk.BooleanVar(value=cfg.get("focus_session_enabled", False))
-    pad(tk.Checkbutton(t_rules, text="Start a Focus Session after a successful unlock", variable=focus_enabled_var), pady=(0, 5))
+    pad(Switch(t_rules, text="Start a Focus Session after a successful unlock", variable=focus_enabled_var), pady=(0, 5))
     focus_minutes_var = tk.IntVar(value=max(1, int(cfg.get("focus_session_minutes", 45) or 45)))
     pad(tk.Label(t_rules, text="Focus Session duration (minutes):"), pady=(0, 3))
     pad(tk.Spinbox(t_rules, from_=1, to=240, textvariable=focus_minutes_var, width=5), pady=(0, 6))
@@ -970,7 +1006,7 @@ def main(start_tab=None):
 
     heading(t_rules, "[07] IDLE LOCK", DANGER)
     idle_enabled_var = tk.BooleanVar(value=cfg.get("idle_lock_enabled", False))
-    pad(tk.Checkbutton(t_rules, text="Lock Windows automatically after inactivity", variable=idle_enabled_var), pady=(0, 5))
+    pad(Switch(t_rules, text="Lock Windows automatically after inactivity", variable=idle_enabled_var), pady=(0, 5))
     idle_minutes_var = tk.IntVar(value=max(1, int(cfg.get("idle_lock_minutes", 30) or 30)))
     pad(tk.Label(t_rules, text="Idle time before Windows Lock (minutes):"), pady=(0, 3))
     pad(tk.Spinbox(t_rules, from_=1, to=240, textvariable=idle_minutes_var, width=5), pady=(0, 16))
@@ -978,7 +1014,7 @@ def main(start_tab=None):
     # ======================================================================
     # TAB 4: PROTECTION
     # ======================================================================
-    t_prot = new_tab("protection", "  Protection  ")
+    t_prot = new_tab("protection", "Protection")
 
     heading(t_prot, "[01] EMERGENCY OVERRIDE", DANGER)
     note(t_prot, "This password is stored only as a salted hash. It immediately unlocks PhraseLock without typing the phrase. "
@@ -986,7 +1022,7 @@ def main(start_tab=None):
 
     emergency_status = "configured" if cfg.get("emergency_password_hash") else "not configured"
     emergency_status_var = tk.StringVar(value=f"Emergency password: {emergency_status}")
-    pad(tk.Label(t_prot, textvariable=emergency_status_var, font=("Consolas", 9)))
+    pad(tk.Label(t_prot, textvariable=emergency_status_var, font=(UI_FONT, 9)))
 
     pw_frame = tk.Frame(t_prot)
     pw_frame.pack(anchor="w", padx=20, pady=(5, 5))
@@ -1001,13 +1037,13 @@ def main(start_tab=None):
     tk.Entry(pw2_frame, textvariable=emergency_pw2_var, show="*", width=25).pack(side="left", padx=8)
 
     clear_pw_var = tk.BooleanVar(value=False)
-    pad(tk.Checkbutton(t_prot, text="Remove the emergency password on Save", variable=clear_pw_var, font=("Consolas", 9)))
+    pad(Switch(t_prot, text="Remove the emergency password on Save", variable=clear_pw_var, font=(UI_FONT, 9)))
 
     heading(t_prot, "[02] WATCHDOG / AUTO-PROTECTION", DANGER)
     note(t_prot, "If enabled, a background watchdog restarts the protection monitor if it disappears. "
                  "Use with caution: disable this option before uninstalling PhraseLock.", color=WARN)
     auto_protection_var = tk.BooleanVar(value=cfg.get("auto_protection", False))
-    pad(tk.Checkbutton(t_prot, text="Restart PhraseLock if its process is terminated", variable=auto_protection_var), pady=(0, 6))
+    pad(Switch(t_prot, text="Restart PhraseLock if its process is terminated", variable=auto_protection_var), pady=(0, 6))
 
     heading(t_prot, "[03] PAUSE / PANIC", DANGER)
     note(t_prot, "Pause PhraseLock for a while WITHOUT typing the phrase or the emergency password. "
@@ -1028,7 +1064,7 @@ def main(start_tab=None):
     startup_status_var = tk.StringVar(
         value="Currently: enabled at logon" if is_startup_enabled() else "Currently: not enabled at logon"
     )
-    pad(tk.Label(t_prot, textvariable=startup_status_var, font=("Consolas", 9), fg=MUTED))
+    pad(tk.Label(t_prot, textvariable=startup_status_var, font=(UI_FONT, 9), fg=MUTED))
 
     startup_btn_frame = tk.Frame(t_prot)
     startup_btn_frame.pack(anchor="w", padx=20, pady=(5, 16))
@@ -1061,7 +1097,7 @@ def main(start_tab=None):
     # TAB 5: STATS (rebuilt every time the tab is opened)
     # ======================================================================
     t_stats = tk.Frame(notebook, bg=UI_BG)
-    notebook.add(t_stats, text="  Stats  ")
+    notebook.add(t_stats, text="Stats", icon=PAGE_ICONS["stats"])
     tab_by_key["stats"] = t_stats
     stats_holder = tk.Frame(t_stats, bg=UI_BG)
     stats_holder.pack(fill="both", expand=True, padx=16, pady=12)
@@ -1096,8 +1132,8 @@ def main(start_tab=None):
             box = tk.Frame(cards, bg=CARD_BG, highlightthickness=1, highlightbackground=BORDER)
             box.grid(row=0, column=col, padx=(0 if col == 0 else 8, 0), sticky="nsew")
             cards.grid_columnconfigure(col, weight=1, uniform="card")
-            tk.Label(box, text=str(value), font=("Bahnschrift", 20, "bold"), fg=CYAN, bg=CARD_BG).pack(pady=(10, 0))
-            tk.Label(box, text=label, font=("Consolas", 8), fg=MUTED, bg=CARD_BG).pack(pady=(0, 10))
+            tk.Label(box, text=str(value), font=(UI_FONT, 20, "bold"), fg=CYAN, bg=CARD_BG).pack(pady=(10, 0))
+            tk.Label(box, text=label, font=(UI_FONT, 8), fg=MUTED, bg=CARD_BG).pack(pady=(0, 10))
 
         card(0, "STREAK (DAYS)", current)
         card(1, "BEST STREAK", best)
@@ -1111,7 +1147,7 @@ def main(start_tab=None):
                   f"Daily goal: {progress.get('goal_progress', 0)} / {cfg.get('daily_goal', 1)}   |   "
                   f"Emergency unlocks: {emergency_count}   |   Time typing: {total_time:.0f}s\n"
                   f"Badges: {', '.join(badges) if badges else 'None yet'}"),
-            font=("Consolas", 9), fg=TEXT, justify="left"
+            font=(UI_FONT, 9), fg=TEXT, justify="left"
         ).pack(anchor="w", pady=(12, 8))
 
         # ---- last 7 days chart: first-try (accent) at the bottom, typos on top
@@ -1140,7 +1176,7 @@ def main(start_tab=None):
                 y = pad_t + plot_h * (1 - i / steps)
                 chart.create_line(pad_l, y, w - pad_r, y, fill=BORDER)
                 chart.create_text(pad_l - 6, y, anchor="e", text=str(round(axis_max * i / steps)),
-                                  fill=MUTED, font=("Consolas", 8))
+                                  fill=MUTED, font=(UI_FONT, 8))
             for i, b in enumerate(series):
                 cx = pad_l + slot * (i + 0.5)
                 x0, x1 = cx - bar_w / 2, cx + bar_w / 2
@@ -1150,8 +1186,8 @@ def main(start_tab=None):
                     chart.create_rectangle(x0, y_base - ft_h, x1, y_base, fill=ACCENT, outline="")
                 if total_h > ft_h:
                     chart.create_rectangle(x0, y_base - total_h, x1, y_base - ft_h, fill=typo_color, outline="")
-                chart.create_text(cx, y_base + 12, text=b["label"], fill=TEXT, font=("Consolas", 9, "bold"))
-                chart.create_text(cx, y_base + 26, text=b["date"][5:], fill=MUTED, font=("Consolas", 7))
+                chart.create_text(cx, y_base + 12, text=b["label"], fill=TEXT, font=(UI_FONT, 9, "bold"))
+                chart.create_text(cx, y_base + 26, text=b["date"][5:], fill=MUTED, font=(UI_FONT, 7))
                 metrics = []
                 if b["wpm"] is not None:
                     metrics.append(f"{b['wpm']:.0f}wpm")
@@ -1159,15 +1195,15 @@ def main(start_tab=None):
                     metrics.append(f"{b['accuracy']:.0f}%")
                 if metrics:
                     chart.create_text(cx, y_base - total_h - 8, text=" ".join(metrics),
-                                      fill=CYAN, font=("Consolas", 7, "bold"))
+                                      fill=CYAN, font=(UI_FONT, 7, "bold"))
                 if b["total"]:
                     chart.create_text(cx, y_base - total_h - 20, text=str(b["total"]),
-                                      fill=TEXT, font=("Consolas", 8, "bold"))
-            chart.create_text(pad_l, 12, anchor="w", text="Last 7 days", fill=MUTED, font=("Consolas", 8, "bold"))
+                                      fill=TEXT, font=(UI_FONT, 8, "bold"))
+            chart.create_text(pad_l, 12, anchor="w", text="Last 7 days", fill=MUTED, font=(UI_FONT, 8, "bold"))
             chart.create_rectangle(pad_l + 90, 6, pad_l + 102, 18, fill=ACCENT, outline="")
-            chart.create_text(pad_l + 108, 12, anchor="w", text="first try", fill=TEXT, font=("Consolas", 8))
+            chart.create_text(pad_l + 108, 12, anchor="w", text="first try", fill=TEXT, font=(UI_FONT, 8))
             chart.create_rectangle(pad_l + 170, 6, pad_l + 182, 18, fill=typo_color, outline="")
-            chart.create_text(pad_l + 188, 12, anchor="w", text="had typo", fill=TEXT, font=("Consolas", 8))
+            chart.create_text(pad_l + 188, 12, anchor="w", text="had typo", fill=TEXT, font=(UI_FONT, 8))
 
         chart.bind("<Configure>", draw_chart)
         draw_chart()
@@ -1177,7 +1213,7 @@ def main(start_tab=None):
         list_frame.pack(fill="both", expand=True)
         lb_scroll = ttk.Scrollbar(list_frame, orient="vertical")
         listbox = tk.Listbox(list_frame, bg=INPUT_BG, fg=TEXT, selectbackground=ACCENT,
-                             highlightthickness=0, borderwidth=0, font=("Consolas", 9),
+                             highlightthickness=0, borderwidth=0, font=(UI_FONT, 9),
                              yscrollcommand=lb_scroll.set)
         lb_scroll.configure(command=listbox.yview)
         lb_scroll.pack(side="right", fill="y")
@@ -1194,6 +1230,7 @@ def main(start_tab=None):
             listbox.insert("end", "No unlocks recorded yet.")
 
     def on_tab_changed(_event=None):
+        page_title_var.set(notebook.title_of())
         if notebook.select() == str(t_stats):
             refresh_stats()
 
@@ -1286,6 +1323,9 @@ def main(start_tab=None):
             "lockout_seconds": num(lockout_seconds_var, 15, 1, 300),
             "theme": theme_var.get(),
             "advanced_view": advanced_var.get(),
+            "show_round_counter": show_round_var.get(),
+            "show_streak_line": show_streak_var.get(),
+            "show_goal_line": show_goal_var.get(),
             "custom_themes": themes.clean_custom_themes(custom_state["themes"]),
             "font_family": font_var.get(),
             "ui_scale": num(ui_scale_var, 100, 75, 150),
@@ -1498,7 +1538,7 @@ def main(start_tab=None):
     # ------------------------------------------------------------ home tab
     # The essentials on one page. The other tabs stay available behind "Show advanced settings".
     advanced_tabs = list(notebook.tabs())
-    t_home = new_tab("home", "  Home  ")
+    t_home = new_tab("home", "Home")
     notebook.insert(0, tab_by_key["home"])
     advanced_var = tk.BooleanVar(value=bool(cfg.get("advanced_view", True)))
 
@@ -1521,10 +1561,10 @@ def main(start_tab=None):
 
     heading(t_home, "STYLE")
     if available_packs:
-        pad(tk.OptionMenu(t_home, pack_choice_var, *[p["name"] for p in available_packs]), pady=(0, 4))
-        pad(tk.Label(t_home, textvariable=pack_desc_var, font=("Consolas", 9), fg=MUTED,
+        pad(Dropdown(t_home, pack_choice_var, *[p["name"] for p in available_packs]), pady=(0, 4))
+        pad(tk.Label(t_home, textvariable=pack_desc_var, font=(UI_FONT, 9), fg=MUTED,
                      wraplength=620, justify="left"), pady=(0, 6))
-        pad(tk.Checkbutton(t_home, text="Also enable the style's protections (strict mode, idle lock...) "
+        pad(Switch(t_home, text="Also enable the style's protections (strict mode, idle lock...) "
                                         "- needs an emergency password", variable=pack_protect_var), pady=(0, 6))
         home_pack_btns = tk.Frame(t_home)
         home_pack_btns.pack(anchor="w", padx=20, pady=(0, 6))
@@ -1534,10 +1574,10 @@ def main(start_tab=None):
         note(t_home, "No style was found next to PhraseLock.")
 
     heading(t_home, "DIFFICULTY")
-    pad(tk.OptionMenu(t_home, difficulty_var, "all", "easy", "normal", "hard", "extreme"), pady=(0, 8))
+    pad(Dropdown(t_home, difficulty_var, "all", "easy", "normal", "hard", "extreme"), pady=(0, 8))
 
     heading(t_home, "EMERGENCY PASSWORD")
-    pad(tk.Label(t_home, textvariable=emergency_status_var, font=("Consolas", 9)))
+    pad(tk.Label(t_home, textvariable=emergency_status_var, font=(UI_FONT, 9)))
     note(t_home, "Unlocks the computer if you ever get stuck. Strongly recommended.", size=8)
 
     def on_home_password():
@@ -1568,7 +1608,7 @@ def main(start_tab=None):
     pad(tk.Button(t_home, text="Set or change the password...", command=on_home_password), pady=(0, 10))
 
     heading(t_home, "MORE")
-    pad(tk.Checkbutton(t_home, text="Show advanced settings (Phrases, Look, Rules, Protection, Stats)",
+    pad(Switch(t_home, text="Show advanced settings (Phrases, Look, Rules, Protection, Stats)",
                        variable=advanced_var), pady=(0, 6))
 
     def on_rerun_wizard():
@@ -1585,23 +1625,24 @@ def main(start_tab=None):
     home_more.pack(anchor="w", padx=20, pady=(0, 12))
     tk.Button(home_more, text="Run the setup wizard again...", command=on_rerun_wizard).pack(side="left")
     tk.Button(home_more, text="What's new?", command=on_show_news).pack(side="left", padx=(8, 0))
-    tk.Label(home_more, text=f"PhraseLock {__version__}", font=("Consolas", 9), fg=MUTED).pack(side="left", padx=(12, 0))
+    tk.Label(home_more, text=f"PhraseLock {__version__}", font=(UI_FONT, 9), fg=MUTED).pack(side="left", padx=(12, 0))
     advanced_var.trace_add("write", apply_advanced_view)
     apply_advanced_view()
 
     # ---------------------------------------------------------------- footer
-    def footer_btn(text, command, side, bg=CARD_ALT, fg=TEXT):
-        tk.Button(footer, text=text, command=command, bg=bg, fg=fg,
-                  activebackground=ACCENT, activeforeground="white",
-                  relief="flat", bd=0, padx=18, pady=7, cursor="hand2",
-                  font=("Consolas", 10, "bold")).pack(side=side, padx=(10, 0) if side == "left" else (0, 10), pady=10)
+    def footer_btn(text, command, side, primary=False, fg=None):
+        tk.Button(footer, text=text, command=command, bg=ACCENT if primary else CARD_ALT,
+                  fg=ACCENT_TEXT if primary else (fg or TEXT),
+                  activebackground=ACCENT, activeforeground=ACCENT_TEXT,
+                  relief="flat", bd=0, padx=20, pady=8, cursor="hand2", highlightthickness=0,
+                  font=(UI_FONT, 10, "bold")).pack(side=side, padx=(10, 0) if side == "left" else (0, 10), pady=10)
 
-    footer_btn("SAVE", on_save, "left", bg=ACCENT, fg="white")
-    footer_btn("PREVIEW", on_preview, "left")
-    footer_btn("EXPORT", lambda: backup.export_dialog(root, lambda: {**cfg, **collect_cfg()}, validation_problem), "left")
-    footer_btn("IMPORT", lambda: backup.import_dialog(root) and root.destroy(), "left")
-    tk.Label(footer, textvariable=saved_msg_var, font=("Consolas", 9), fg="#19e68c", bg=CARD_BG).pack(side="left", padx=14)
-    footer_btn("[ LOCK NOW ]", launch_manual_lock, "right")
+    footer_btn("Save", on_save, "left", primary=True)
+    footer_btn("Preview", on_preview, "left")
+    footer_btn("Export", lambda: backup.export_dialog(root, lambda: {**cfg, **collect_cfg()}, validation_problem), "left")
+    footer_btn("Import", lambda: backup.import_dialog(root) and root.destroy(), "left")
+    tk.Label(footer, textvariable=saved_msg_var, font=(UI_FONT, 9), fg=OK, bg=CARD_BG).pack(side="left", padx=14)
+    footer_btn("Lock now", launch_manual_lock, "right", fg=ACCENT_2)
 
     root.bind("<Control-s>", on_save)
     
@@ -1610,7 +1651,7 @@ def main(start_tab=None):
 
     watched_vars = [
         enabled_var, title_var, phrases_file_var, difficulty_var, theme_var, font_var,
-        ui_scale_var, custom_json_var, advanced_var, scanlines_var, glow_var, glitch_var, bg_images_var, bg_mode_var,
+        ui_scale_var, custom_json_var, advanced_var, show_round_var, show_streak_var, show_goal_var, scanlines_var, glow_var, glitch_var, bg_images_var, bg_mode_var,
         all_screens_var, *screen_vars.values(), bg_per_screen_var, animate_gif_var, *mode_vars.values(), panel_color_var, panel_opacity_var, play_sound_var, sound_error_var,
         success_sound_var, error_sound_var, repeats_var, reset_on_error_var,
         strict_mode_var, weighting_var, disable_paste_var, case_insensitive_var,
@@ -1662,8 +1703,8 @@ def main(start_tab=None):
         txt.bind("<KeyRelease>", schedule_autosave, add="+")
         txt.bind("<FocusOut>", schedule_autosave, add="+")
     
-    if start_tab in tab_by_key:
-        select_tab(start_tab)
+    select_tab(start_tab if start_tab in tab_by_key else "home")
+    page_title_var.set(notebook.title_of())
 
     root.mainloop()
     if reopen["wizard"]:
