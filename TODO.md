@@ -15,6 +15,7 @@ Tick a box when a feature is done (clickable on GitHub).
 - [ ] Add default theme packs (TechDom, PetDom, Mommy/Daddy, Master/Mistress, Brat Tamer, FinDom, etc.)
 - [ ] 🆕 Add a "What's new?" window after updates
 - [ ] 🆕 Add a clear uninstall and cleanup process
+- [ ] 🆕 Make the creation of file with new sebtence easier
 
 ## 🟠 Medium priority
 
@@ -38,6 +39,7 @@ Tick a box when a feature is done (clickable on GitHub).
 - [ ] 🆕 Add one-click profile switching from the system tray
 - [ ] 🆕 Add a "Reset to defaults" button with a confirmation dialog
 - [ ] 🆕 Add a local API or plugin system for third-party integrations (Discord integration?)
+- [ ] 🆕 Add multiple confirmation message if want to use the emergency password with penality potentially
 
 ## 🟢 Low priority
 
