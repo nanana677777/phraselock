@@ -19,7 +19,7 @@ Tick a box when a feature is done (clickable on GitHub).
 - [ ] Make the creation of file with new sentence easier
 - [x] Add multiple confirmation message if want to use the emergency password with penality potentially
 - [ ] Add an update checker that compares the installed version with the latest GitHub release
-- [ ] Add an exit option on the tray
+- [x] Add an exit option on the tray
 
 ## 🟠 Medium priority
 

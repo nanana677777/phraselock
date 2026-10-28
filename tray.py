@@ -185,6 +185,27 @@ def _open_settings(icon=None, item=None):
         log("Could not open settings from tray icon:\n" + traceback.format_exc())
 
 
+_last_exit_proc = None
+
+
+def _exit_app(icon=None, item=None):
+    """Ask (in a separate process) whether to exit PhraseLock; that process stops the monitor."""
+    global _last_exit_proc
+    try:
+        if _last_exit_proc is not None and _last_exit_proc.poll() is None:
+            return   # the confirmation window is already open
+        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        if getattr(sys, "frozen", False):
+            cmd = [sys.executable, "--exit-monitor", str(os.getpid())]
+        else:
+            script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "phrase_lock.py")
+            cmd = [sys.executable, script, "--exit-monitor", str(os.getpid())]
+        _last_exit_proc = subprocess.Popen(cmd, creationflags=flags, env=_child_env(), close_fds=True)
+    except Exception:
+        import traceback
+        log("Could not start the exit confirmation:\n" + traceback.format_exc())
+
+
 def start_tray():
     """Start the tray icon in the background. Returns the icon, or None."""
     try:
@@ -230,6 +251,8 @@ def start_tray():
             pystray.MenuItem("Resume now", resume_now,
                              visible=lambda item: pause_remaining_seconds() > 0),
             pystray.MenuItem("Open settings", _open_settings, default=True),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem("Exit PhraseLock", _exit_app),
         )
         icon = pystray.Icon("PhraseLock", make_icon(STATES[state["name"]][1]), state["text"], menu)
 

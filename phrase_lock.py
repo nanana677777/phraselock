@@ -70,6 +70,10 @@ if __name__ == "__main__":
         import settings
         settings.main()
         raise SystemExit
+    if "--exit-monitor" in sys.argv:
+        from exit_app import run as exit_run
+        exit_run(sys.argv)
+        raise SystemExit
     if "--monitor" in sys.argv:
         _run_monitor()
         raise SystemExit

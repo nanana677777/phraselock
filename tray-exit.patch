@@ -1,0 +1,222 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 8df28f0..dd4e2c2 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -8,6 +8,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
+ ## [Unreleased]
+ 
+ ### Added
++- **Exit option in the tray menu.** Right-click the tray icon > **Exit PhraseLock** closes the background monitor and, if Auto-protection is on, its watchdog first so nothing restarts it. It asks for confirmation, and for the emergency password (3 tries) when one is set, so it cannot be used to dodge the lock. New `exit_app.py` and the `--exit-monitor` argument.
+ - **Emergency unlock wording per pack.** A pack's `ui_texts` can now set the emergency dialog's texts (`emergency_open`, `emergency_title`, `emergency_prompt`, `emergency_submit`, `emergency_back`, `emergency_continue`, `emergency_wrong`) and its "are you sure?" screens (`emergency_steps`: up to 5 `{title, text}`, used position by position, the rest keeps the built-in wording). TechDom (Vex, admin override) and PetDom (Juno's spare key) ship their own. Packs you save from your settings carry them too.
+ - **Safer emergency unlock.** Before the emergency password is asked, the lock screen now shows 1 to 5 "are you sure?" screens (3 by default), each with a 3-second wait and a button to go back and type the phrase instead. Optional penalty once the emergency password is used: reset the current streak (the best streak is kept) and/or lose some XP. Both are in *Settings > Protection > Emergency override* and described on the last screen. New settings `emergency_confirmations`, `emergency_penalty_streak`, `emergency_penalty_xp` (not changed by theme packs); new `emergency.py`.
+ - **Uninstall and cleanup button.** *Settings > Protection > Uninstall and clean up...* asks what to remove (stop PhraseLock and its watchdog, the start-with-Windows shortcut, your settings/stats/packs/logs in `%APPDATA%\PhraseLock`, and the `PhraseLock.exe` file itself), shows a summary and only acts after you confirm. The emergency password is required when one is set. New `uninstall.py`.
+diff --git a/README.md b/README.md
+index 5ef90ec..52a2b55 100644
+--- a/README.md
++++ b/README.md
+@@ -184,6 +184,7 @@ Running the tests before building helps identify problems in the project's teste
+ | `uikit.py`              | Settings widgets: sidebar, switches, dropdowns, palette |
+ | `wizard.py`             | First-launch setup wizard            |
+ | `whatsnew.py`, `version.py` | "What's new?" window after updates, current version |
++| `exit_app.py`           | "Exit PhraseLock" from the tray menu |
+ | `uninstall.py`          | Uninstall and cleanup (processes, shortcut, data, exe) |
+ | `packs/`                | Theme packs (`packs/techdom/` and `packs/petdom/` have their own README) |
+ | `PhraseLockWatchdog.py` | Optional watchdog functionality      |
+diff --git a/exit_app.py b/exit_app.py
+new file mode 100644
+index 0000000..cbe5d1e
+--- /dev/null
++++ b/exit_app.py
+@@ -0,0 +1,85 @@
++"""Exit PhraseLock from the tray icon.
++
++The tray lives inside the background monitor, which cannot show Tk dialogs from its tray thread. So
++"Exit PhraseLock" starts a short-lived process (``--exit-monitor <pid>``) that asks for confirmation
++(and the emergency password when one is set), then stops the watchdog first, so it cannot restart
++anything, and finally the monitor itself.
++"""
++
++import os
++import sys
++
++from config import load_config, log
++from stats import verify_emergency_password
++
++MAX_TRIES = 3
++
++
++def parse_pid(argv):
++    """The monitor pid after --exit-monitor, or None."""
++    try:
++        return int(argv[argv.index("--exit-monitor") + 1])
++    except (ValueError, IndexError):
++        return None
++
++
++def needs_password(cfg):
++    return bool(cfg.get("emergency_password_hash"))
++
++
++def check_password(cfg, ask):
++    """True when *ask()* returns the emergency password within MAX_TRIES attempts.
++
++    ask(attempt_number) returns the typed text, or None when the person cancels.
++    """
++    for attempt in range(1, MAX_TRIES + 1):
++        typed = ask(attempt)
++        if typed is None:
++            return False
++        if verify_emergency_password(cfg, typed):
++            return True
++    return False
++
++
++def stop_everything(monitor_pid, exe_path, frozen, own_pid=None):
++    """Stop the watchdog(s), then the monitor. Returns (stopped, failed) pids."""
++    import uninstall
++    own = (own_pid if own_pid is not None else os.getpid(),)
++    targets = [p for p in uninstall.find_processes(exe_path, frozen, own_pids=own) if p["role"] == "watchdog"]
++    if monitor_pid and monitor_pid not in own:
++        targets.append({"pid": monitor_pid, "role": "app"})
++    return uninstall.stop_processes(targets)
++
++
++def run(argv):
++    """Entry point for ``--exit-monitor <pid>``."""
++    import tkinter as tk
++    from tkinter import messagebox, simpledialog
++
++    pid = parse_pid(argv)
++    cfg = load_config()
++    root = tk.Tk()
++    root.withdraw()
++    root.attributes("-topmost", True)
++    try:
++        if needs_password(cfg):
++            def ask(attempt):
++                text = "Enter the emergency password to exit PhraseLock."
++                if attempt > 1:
++                    text = f"Wrong password ({attempt}/{MAX_TRIES}). Try again."
++                return simpledialog.askstring("Exit PhraseLock", text, show="*", parent=root)
++
++            if not check_password(cfg, ask):
++                log("Exit from the tray refused (password).")
++                return False
++        elif not messagebox.askyesno("Exit PhraseLock", "Exit PhraseLock?\n\nThe protection stops until you "
++                                     "start PhraseLock again.", icon="warning", default="no", parent=root):
++            return False
++        stopped, failed = stop_everything(pid, sys.executable, bool(getattr(sys, "frozen", False)))
++        log(f"Exit from the tray: stopped {stopped}, failed {failed}.")
++        if failed:
++            messagebox.showerror("Exit PhraseLock", "Some PhraseLock processes could not be stopped. "
++                                 "Close them from the Task Manager.", parent=root)
++        return not failed
++    finally:
++        root.destroy()
+diff --git a/phrase_lock.py b/phrase_lock.py
+index 98ffc29..c995595 100644
+--- a/phrase_lock.py
++++ b/phrase_lock.py
+@@ -70,6 +70,10 @@ if __name__ == "__main__":
+         import settings
+         settings.main()
+         raise SystemExit
++    if "--exit-monitor" in sys.argv:
++        from exit_app import run as exit_run
++        exit_run(sys.argv)
++        raise SystemExit
+     if "--monitor" in sys.argv:
+         _run_monitor()
+         raise SystemExit
+diff --git a/tests/test_exit_app.py b/tests/test_exit_app.py
+new file mode 100644
+index 0000000..36e0efd
+--- /dev/null
++++ b/tests/test_exit_app.py
+@@ -0,0 +1,45 @@
++import unittest
++from unittest import mock
++
++import exit_app
++import stats
++
++
++class ExitAppTests(unittest.TestCase):
++    def test_parse_pid(self):
++        self.assertEqual(exit_app.parse_pid(["x", "--exit-monitor", "1234"]), 1234)
++        self.assertIsNone(exit_app.parse_pid(["x", "--exit-monitor"]))
++        self.assertIsNone(exit_app.parse_pid(["x", "--exit-monitor", "abc"]))
++        self.assertIsNone(exit_app.parse_pid(["x"]))
++
++    def test_needs_password_only_when_set(self):
++        self.assertFalse(exit_app.needs_password({}))
++        self.assertTrue(exit_app.needs_password(stats.set_emergency_password("secret1")))
++
++    def test_password_check(self):
++        cfg = stats.set_emergency_password("secret1")
++        self.assertTrue(exit_app.check_password(cfg, lambda n: "secret1"))
++        answers = iter(["no", "nope", "secret1"])
++        self.assertTrue(exit_app.check_password(cfg, lambda n: next(answers)))
++        wrong = iter(["a", "b", "c", "secret1"])
++        self.assertFalse(exit_app.check_password(cfg, lambda n: next(wrong)))     # 3 tries only
++        self.assertFalse(exit_app.check_password(cfg, lambda n: None))             # cancelled
++
++    def test_stop_everything_targets_watchdog_then_monitor_only(self):
++        found = [{"pid": 5, "role": "watchdog"}, {"pid": 6, "role": "app"}]
++        with mock.patch("uninstall.find_processes", return_value=found) as find, \
++                mock.patch("uninstall.stop_processes", return_value=([5, 77], [])) as stop:
++            result = exit_app.stop_everything(77, "PhraseLock.exe", True, own_pid=99)
++        self.assertEqual(result, ([5, 77], []))
++        find.assert_called_once_with("PhraseLock.exe", True, own_pids=(99,))
++        self.assertEqual(stop.call_args[0][0], [{"pid": 5, "role": "watchdog"}, {"pid": 77, "role": "app"}])
++
++    def test_never_stops_itself(self):
++        with mock.patch("uninstall.find_processes", return_value=[]), \
++                mock.patch("uninstall.stop_processes", return_value=([], [])) as stop:
++            exit_app.stop_everything(99, "x", False, own_pid=99)
++        self.assertEqual(stop.call_args[0][0], [])
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/tray.py b/tray.py
+index 3793cfa..4dfbc9b 100644
+--- a/tray.py
++++ b/tray.py
+@@ -185,6 +185,27 @@ def _open_settings(icon=None, item=None):
+         log("Could not open settings from tray icon:\n" + traceback.format_exc())
+ 
+ 
++_last_exit_proc = None
++
++
++def _exit_app(icon=None, item=None):
++    """Ask (in a separate process) whether to exit PhraseLock; that process stops the monitor."""
++    global _last_exit_proc
++    try:
++        if _last_exit_proc is not None and _last_exit_proc.poll() is None:
++            return   # the confirmation window is already open
++        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
++        if getattr(sys, "frozen", False):
++            cmd = [sys.executable, "--exit-monitor", str(os.getpid())]
++        else:
++            script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "phrase_lock.py")
++            cmd = [sys.executable, script, "--exit-monitor", str(os.getpid())]
++        _last_exit_proc = subprocess.Popen(cmd, creationflags=flags, env=_child_env(), close_fds=True)
++    except Exception:
++        import traceback
++        log("Could not start the exit confirmation:\n" + traceback.format_exc())
++
++
+ def start_tray():
+     """Start the tray icon in the background. Returns the icon, or None."""
+     try:
+@@ -230,6 +251,8 @@ def start_tray():
+             pystray.MenuItem("Resume now", resume_now,
+                              visible=lambda item: pause_remaining_seconds() > 0),
+             pystray.MenuItem("Open settings", _open_settings, default=True),
++            pystray.Menu.SEPARATOR,
++            pystray.MenuItem("Exit PhraseLock", _exit_app),
+         )
+         icon = pystray.Icon("PhraseLock", make_icon(STATES[state["name"]][1]), state["text"], menu)
+ 

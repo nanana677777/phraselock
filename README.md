@@ -184,6 +184,7 @@ Running the tests before building helps identify problems in the project's teste
 | `uikit.py`              | Settings widgets: sidebar, switches, dropdowns, palette |
 | `wizard.py`             | First-launch setup wizard            |
 | `whatsnew.py`, `version.py` | "What's new?" window after updates, current version |
+| `exit_app.py`           | "Exit PhraseLock" from the tray menu |
 | `uninstall.py`          | Uninstall and cleanup (processes, shortcut, data, exe) |
 | `packs/`                | Theme packs (`packs/techdom/` and `packs/petdom/` have their own README) |
 | `PhraseLockWatchdog.py` | Optional watchdog functionality      |
