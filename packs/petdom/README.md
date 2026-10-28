@@ -12,7 +12,7 @@ Apply it in **Settings > Look > Theme pack**.
 |------|-------|
 | Phrases | `phrases.csv` (28 phrases, easy / normal / hard / extreme) |
 | Look | `PetDom` theme (amber, gold and rose on dark brown), Segoe UI, glow, no scanlines or glitch |
-| Interface texts | `ui_texts` in `pack.json` (header, subtitle, button, error messages, lockout, wait) |
+| Interface texts | `ui_texts` in `pack.json` (header, subtitle, button, error messages, lockout, wait, emergency unlock dialog and its 5 confirmation screens) |
 | Backgrounds | 3 original images in `backgrounds/` (`pawtrail`, `bokeh`, `toys`: dark and warm, easy on the phrase panel), one picked at random per lock |
 | Audio | `audio/success.wav` (cheerful rising chirp), `audio/error.wav` (soft falling "boop boop"), both generated |
 | Rules | 2 rounds, a typo does not reset progress, case-insensitive, no paste, 2 s before the button, 6 wrong attempts then a 20 s time out |

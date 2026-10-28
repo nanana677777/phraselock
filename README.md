@@ -22,9 +22,12 @@ Customize your phrases, choose a visual theme, track your progress, and make eac
 - **Visual customization** — themes, backgrounds (including animated GIFs), interface scaling, and visual effects are available in the project.
 - **Several background images** — add as many pictures as you like; one is picked at random each time the lock appears, optionally a different one on each screen.
 - **Multi-screen support** — lock the primary screen, any screen, several screens, or all of them.
-- **Emergency recovery** — configure an emergency password before using protection features.
+- **Emergency recovery** — configure an emergency password before using protection features. Using it goes through 1 to 5 "are you sure?" screens (configurable, worded by the active pack) and can optionally cost you your streak and/or some XP.
+- **Lock-screen info switches** — *Settings > Look > Lock-screen info* shows or hides the round counter, the first-try streak line and the daily goal / level / XP line.
 - **Pause** — pause PhraseLock for 5 minutes to 1 hour from the tray icon, or with an optional global hotkey, without typing the phrase.
-- **System tray icon** — see at a glance that PhraseLock is running; open the settings from the tray.
+- **System tray icon** — see at a glance that PhraseLock is running; open the settings, pause, or **Exit PhraseLock** from the tray (the emergency password is asked first when one is set).
+- **Update checker** — *Settings > Home > Updates* compares your version with the latest GitHub release (manual button, plus an optional once-a-day check).
+- **Uninstall and cleanup** — one button stops PhraseLock and removes its shortcut, data and `.exe` on request (see *Uninstall* below).
 - **Windows executable** — get started without manually running the Python source code.
 
 Feature availability may depend on the version and configuration you are running.
@@ -109,7 +112,7 @@ For TXT files, use the format expected by the phrase loader in the source code. 
 
 ## 🛡️ Safety and recovery
 
-**Pausing is not protected.** The tray menu and the pause hotkey (off by default) pause PhraseLock without the phrase or the emergency password. That is meant for real emergencies; if you use PhraseLock as a discipline tool, leave the hotkey empty and remember the tray menu is there.
+**Pausing is not protected.** The tray menu and the pause hotkey (off by default) pause PhraseLock without the phrase or the emergency password. That is meant for real emergencies; if you use PhraseLock as a discipline tool, leave the hotkey empty and remember the tray menu is there. *Exit PhraseLock* in the tray menu asks for the emergency password when one is set.
 
 PhraseLock can interact with Windows session locking and optional automatic protection. Misconfiguration or unexpected behavior could interrupt your normal workflow.
 
@@ -186,6 +189,7 @@ Running the tests before building helps identify problems in the project's teste
 | `whatsnew.py`, `version.py` | "What's new?" window after updates, current version |
 | `exit_app.py`           | "Exit PhraseLock" from the tray menu |
 | `updatecheck.py`        | Update checker (latest GitHub release) |
+| `emergency.py`          | Emergency unlock confirmation screens and penalty |
 | `uninstall.py`          | Uninstall and cleanup (processes, shortcut, data, exe) |
 | `packs/`                | Theme packs (`packs/techdom/` and `packs/petdom/` have their own README) |
 | `PhraseLockWatchdog.py` | Optional watchdog functionality      |

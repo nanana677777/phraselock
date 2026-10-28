@@ -12,7 +12,7 @@ Apply it in **Settings > Look > Theme pack**.
 |------|-------|
 | Phrases | `phrases.csv` (28 phrases, easy / normal / hard / extreme) |
 | Look | `TechDom` theme (cyan and green on near-black), Consolas, scanlines, glow, glitch on errors |
-| Interface texts | `ui_texts` in `pack.json` (header, subtitle, button, error messages, lockout, wait) |
+| Interface texts | `ui_texts` in `pack.json` (header, subtitle, button, error messages, lockout, wait, emergency unlock dialog and its 5 confirmation screens) |
 | Backgrounds | 3 original images in `backgrounds/` (`grid`, `circuit`, `datastream`: dark cyan/green, easy on the phrase panel), one picked at random per lock |
 | Audio | `audio/success.wav`, `audio/error.wav` (short generated beeps) |
 | Rules | 2 rounds, reset on typo, no paste, 3 s before Submit, 5 wrong attempts then a 30 s lockout |
