@@ -24,6 +24,7 @@ import hotkeys
 import packs
 import themes
 import uikit
+import uninstall
 import whatsnew
 import wizard
 from uikit import Switch, Dropdown, UI_FONT
@@ -341,7 +342,7 @@ def main(start_tab=None):
         "DAILY GOAL": "Daily goal", "SCHEDULE MATRIX": "Schedule", "FOCUS SESSION": "Focus session",
         "IDLE LOCK": "Idle lock", "EMERGENCY OVERRIDE": "Emergency password",
         "WATCHDOG / AUTO-PROTECTION": "Auto-protection", "PAUSE / PANIC": "Pause",
-        "BOOT SEQUENCE": "Start with Windows", "LOCK SCREEN INFO": "Lock-screen info", "QUICK START": "Quick start",
+        "BOOT SEQUENCE": "Start with Windows", "UNINSTALL": "Uninstall and cleanup", "LOCK SCREEN INFO": "Lock-screen info", "QUICK START": "Quick start",
     }
 
     def heading(parent, text, color=None):
@@ -1092,6 +1093,46 @@ def main(start_tab=None):
 
     tk.Button(startup_btn_frame, text="Enable at startup...", command=on_enable_startup).pack(side="left")
     tk.Button(startup_btn_frame, text="Disable at startup", command=on_disable_startup).pack(side="left", padx=(10, 0))
+
+    heading(t_prot, "[05] UNINSTALL")
+    note(t_prot, "Stop PhraseLock, remove the start-with-Windows shortcut and optionally delete your data "
+                 "and the program file. You choose what is removed, and confirm before anything happens.", size=9)
+
+    def on_uninstall():
+        frozen = bool(getattr(sys, "frozen", False))
+        current = load_config()
+        if current.get("emergency_password_hash"):
+            typed = simpledialog.askstring("Uninstall", "Enter the emergency password to continue:",
+                                           show="*", parent=root)
+            if typed is None:
+                return
+            if not phrase_lock.verify_emergency_password(current, typed):
+                messagebox.showerror("Uninstall", "Wrong password.", parent=root)
+                return
+        options = uninstall.ask_options(root, frozen, CONFIG_DIR, is_startup_enabled())
+        if not options:
+            return
+        question = uninstall.confirmation_text(options, frozen)
+        if not question:
+            messagebox.showinfo("Uninstall", "Nothing was selected.", parent=root)
+            return
+        if not messagebox.askyesno("Uninstall", question, icon="warning", default="no", parent=root):
+            return
+        pack_busy["on"] = True      # autosave must not recreate the files we are deleting
+        try:
+            report = uninstall.run_uninstall(
+                options, CONFIG_DIR, startup_shortcut_path(), sys.executable, frozen,
+                own_pids=(os.getpid(), os.getppid()))
+        except Exception as exc:
+            pack_busy["on"] = False
+            messagebox.showerror("Uninstall", f"Something went wrong:\n{exc}", parent=root)
+            return
+        messagebox.showinfo("Uninstall finished", "\n".join(report), parent=root)
+        root.destroy()
+
+    uninstall_btn_frame = tk.Frame(t_prot)
+    uninstall_btn_frame.pack(anchor="w", padx=20, pady=(5, 16))
+    tk.Button(uninstall_btn_frame, text="Uninstall and clean up...", command=on_uninstall).pack(side="left")
 
     # ======================================================================
     # TAB 5: STATS (rebuilt every time the tab is opened)

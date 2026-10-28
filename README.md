@@ -123,6 +123,10 @@ Before enabling protection:
 
 If PhraseLock behaves unexpectedly, use the recovery instructions in the source code and configuration documentation. Do not enable automatic restart or strict protection until you have confirmed that you can recover safely.
 
+## 🧹 Uninstall
+
+PhraseLock has no installer. Open *Settings > Protection > Uninstall and clean up...*, choose what to remove (stop it and its watchdog, the start-with-Windows shortcut, your data in `%APPDATA%\PhraseLock`, the `.exe`) and confirm. The emergency password is asked first if you set one. To do it by hand: close PhraseLock and PhraseLock Watchdog from the Task Manager, delete `PhraseLock.lnk` from the Startup folder (`Win+R`, `shell:startup`), then delete `%APPDATA%\PhraseLock` and the `.exe`.
+
 ## 🧰 Build from source
 
 Want to inspect the code or build your own executable?
@@ -180,6 +184,7 @@ Running the tests before building helps identify problems in the project's teste
 | `uikit.py`              | Settings widgets: sidebar, switches, dropdowns, palette |
 | `wizard.py`             | First-launch setup wizard            |
 | `whatsnew.py`, `version.py` | "What's new?" window after updates, current version |
+| `uninstall.py`          | Uninstall and cleanup (processes, shortcut, data, exe) |
 | `packs/`                | Theme packs (`packs/techdom/` and `packs/petdom/` have their own README) |
 | `PhraseLockWatchdog.py` | Optional watchdog functionality      |
 | `tray.py`               | System tray status icon              |

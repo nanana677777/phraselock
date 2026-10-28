@@ -1,0 +1,505 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index d5e7fc3..1dd42fe 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -8,6 +8,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
+ ## [Unreleased]
+ 
+ ### Added
++- **Uninstall and cleanup button.** *Settings > Protection > Uninstall and clean up...* asks what to remove (stop PhraseLock and its watchdog, the start-with-Windows shortcut, your settings/stats/packs/logs in `%APPDATA%\PhraseLock`, and the `PhraseLock.exe` file itself), shows a summary and only acts after you confirm. The emergency password is required when one is set. New `uninstall.py`.
+ - **Lock-screen info switches.** *Settings > Look > Lock-screen info* turns on or off the round counter, the first-try streak line and the daily goal / level / XP line shown under the phrase. The typing challenge itself is unchanged. New settings `show_round_counter`, `show_streak_line`, `show_goal_line` (all on by default; packs never change them).
+ - **"What's new?" window.** After an update, the next time you open Settings a window lists what changed since the version you last saw (read from `CHANGELOG.md`, now bundled in the .exe) and remembers it. A fresh install does not see it. *Settings > Home > What's new?* opens it any time. New `version.py` (bump it when you release; "[Unreleased]" entries are shown under that version), `whatsnew.py` and setting `last_seen_version`.
+ - **Window title follows the style, and you can make your own packs.** The Settings header now reads `app_kicker` / `app_title` from the active pack (TechDom: "TECHDOM / DISCIPLINE PROTOCOL", PetDom: "PETDOM / GOOD PET PROTOCOL", no pack: "PHRASELOCK / DISCIPLINE PROTOCOL"). Packs in `%APPDATA%\PhraseLock\packs\<name>\pack.json` are now listed and applied like the shipped ones, and *Settings > Look > Save my settings as a pack...* creates one from your current settings (phrase, sound and background files are copied in; no password or schedule is ever copied).
+diff --git a/README.md b/README.md
+index 10e2b87..5ef90ec 100644
+--- a/README.md
++++ b/README.md
+@@ -123,6 +123,10 @@ Before enabling protection:
+ 
+ If PhraseLock behaves unexpectedly, use the recovery instructions in the source code and configuration documentation. Do not enable automatic restart or strict protection until you have confirmed that you can recover safely.
+ 
++## 🧹 Uninstall
++
++PhraseLock has no installer. Open *Settings > Protection > Uninstall and clean up...*, choose what to remove (stop it and its watchdog, the start-with-Windows shortcut, your data in `%APPDATA%\PhraseLock`, the `.exe`) and confirm. The emergency password is asked first if you set one. To do it by hand: close PhraseLock and PhraseLock Watchdog from the Task Manager, delete `PhraseLock.lnk` from the Startup folder (`Win+R`, `shell:startup`), then delete `%APPDATA%\PhraseLock` and the `.exe`.
++
+ ## 🧰 Build from source
+ 
+ Want to inspect the code or build your own executable?
+@@ -180,6 +184,7 @@ Running the tests before building helps identify problems in the project's teste
+ | `uikit.py`              | Settings widgets: sidebar, switches, dropdowns, palette |
+ | `wizard.py`             | First-launch setup wizard            |
+ | `whatsnew.py`, `version.py` | "What's new?" window after updates, current version |
++| `uninstall.py`          | Uninstall and cleanup (processes, shortcut, data, exe) |
+ | `packs/`                | Theme packs (`packs/techdom/` and `packs/petdom/` have their own README) |
+ | `PhraseLockWatchdog.py` | Optional watchdog functionality      |
+ | `tray.py`               | System tray status icon              |
+diff --git a/settings.py b/settings.py
+index 0431b28..ee10491 100644
+--- a/settings.py
++++ b/settings.py
+@@ -24,6 +24,7 @@ import hotkeys
+ import packs
+ import themes
+ import uikit
++import uninstall
+ import whatsnew
+ import wizard
+ from uikit import Switch, Dropdown, UI_FONT
+@@ -341,7 +342,7 @@ def main(start_tab=None):
+         "DAILY GOAL": "Daily goal", "SCHEDULE MATRIX": "Schedule", "FOCUS SESSION": "Focus session",
+         "IDLE LOCK": "Idle lock", "EMERGENCY OVERRIDE": "Emergency password",
+         "WATCHDOG / AUTO-PROTECTION": "Auto-protection", "PAUSE / PANIC": "Pause",
+-        "BOOT SEQUENCE": "Start with Windows", "LOCK SCREEN INFO": "Lock-screen info", "QUICK START": "Quick start",
++        "BOOT SEQUENCE": "Start with Windows", "UNINSTALL": "Uninstall and cleanup", "LOCK SCREEN INFO": "Lock-screen info", "QUICK START": "Quick start",
+     }
+ 
+     def heading(parent, text, color=None):
+@@ -1093,6 +1094,46 @@ def main(start_tab=None):
+     tk.Button(startup_btn_frame, text="Enable at startup...", command=on_enable_startup).pack(side="left")
+     tk.Button(startup_btn_frame, text="Disable at startup", command=on_disable_startup).pack(side="left", padx=(10, 0))
+ 
++    heading(t_prot, "[05] UNINSTALL")
++    note(t_prot, "Stop PhraseLock, remove the start-with-Windows shortcut and optionally delete your data "
++                 "and the program file. You choose what is removed, and confirm before anything happens.", size=9)
++
++    def on_uninstall():
++        frozen = bool(getattr(sys, "frozen", False))
++        current = load_config()
++        if current.get("emergency_password_hash"):
++            typed = simpledialog.askstring("Uninstall", "Enter the emergency password to continue:",
++                                           show="*", parent=root)
++            if typed is None:
++                return
++            if not phrase_lock.verify_emergency_password(current, typed):
++                messagebox.showerror("Uninstall", "Wrong password.", parent=root)
++                return
++        options = uninstall.ask_options(root, frozen, CONFIG_DIR, is_startup_enabled())
++        if not options:
++            return
++        question = uninstall.confirmation_text(options, frozen)
++        if not question:
++            messagebox.showinfo("Uninstall", "Nothing was selected.", parent=root)
++            return
++        if not messagebox.askyesno("Uninstall", question, icon="warning", default="no", parent=root):
++            return
++        pack_busy["on"] = True      # autosave must not recreate the files we are deleting
++        try:
++            report = uninstall.run_uninstall(
++                options, CONFIG_DIR, startup_shortcut_path(), sys.executable, frozen,
++                own_pids=(os.getpid(), os.getppid()))
++        except Exception as exc:
++            pack_busy["on"] = False
++            messagebox.showerror("Uninstall", f"Something went wrong:\n{exc}", parent=root)
++            return
++        messagebox.showinfo("Uninstall finished", "\n".join(report), parent=root)
++        root.destroy()
++
++    uninstall_btn_frame = tk.Frame(t_prot)
++    uninstall_btn_frame.pack(anchor="w", padx=20, pady=(5, 16))
++    tk.Button(uninstall_btn_frame, text="Uninstall and clean up...", command=on_uninstall).pack(side="left")
++
+     # ======================================================================
+     # TAB 5: STATS (rebuilt every time the tab is opened)
+     # ======================================================================
+diff --git a/tests/test_uninstall.py b/tests/test_uninstall.py
+new file mode 100644
+index 0000000..ea504fd
+--- /dev/null
++++ b/tests/test_uninstall.py
+@@ -0,0 +1,106 @@
++import os
++import tempfile
++import unittest
++from unittest import mock
++
++import uninstall
++
++
++class FakeProc:
++    def __init__(self, pid, exe, cmdline):
++        self.info = {"pid": pid, "exe": exe, "cmdline": cmdline}
++
++
++class ClassifyTests(unittest.TestCase):
++    EXE = r"C:\Apps\PhraseLock.exe"
++
++    def test_frozen_roles(self):
++        self.assertEqual(uninstall.classify({"exe": self.EXE, "cmdline": [self.EXE, "--monitor"]}, self.EXE, True), "app")
++        self.assertEqual(uninstall.classify({"exe": self.EXE, "cmdline": [self.EXE, "--watchdog"]}, self.EXE, True), "watchdog")
++        self.assertEqual(uninstall.classify({"exe": r"C:\x\PhraseLockWatchdog.exe", "cmdline": []}, self.EXE, True), "watchdog")
++        self.assertIsNone(uninstall.classify({"exe": r"C:\Windows\notepad.exe", "cmdline": []}, self.EXE, True))
++
++    def test_source_roles(self):
++        self.assertEqual(uninstall.classify({"exe": "python", "cmdline": ["python", "phrase_lock.py", "--monitor"]}, "", False), "app")
++        self.assertEqual(uninstall.classify({"exe": "python", "cmdline": ["python", "PhraseLockWatchdog.py"]}, "", False), "watchdog")
++        self.assertIsNone(uninstall.classify({"exe": "python", "cmdline": ["python", "other.py"]}, "", False))
++
++    def test_find_skips_own_and_orders_watchdog_first(self):
++        procs = [FakeProc(1, self.EXE, [self.EXE]), FakeProc(2, self.EXE, [self.EXE, "--watchdog"]),
++                 FakeProc(3, self.EXE, [self.EXE]), FakeProc(4, "x", [])]
++        found = uninstall.find_processes(self.EXE, True, own_pids=(3,), process_iter=lambda: procs)
++        self.assertEqual([(p["pid"], p["role"]) for p in found], [(2, "watchdog"), (1, "app")])
++
++
++class FilesTests(unittest.TestCase):
++    def test_data_summary_and_remove(self):
++        with tempfile.TemporaryDirectory() as tmp:
++            data = os.path.join(tmp, "PhraseLock")
++            os.makedirs(os.path.join(data, "packs", "a"))
++            for rel in ("config.json", os.path.join("packs", "a", "pack.json")):
++                with open(os.path.join(data, rel), "w") as f:
++                    f.write("12345")
++            self.assertEqual(uninstall.data_summary(data), (2, 10))
++            self.assertEqual(uninstall.remove_data(data), [])
++            self.assertFalse(os.path.exists(data))
++            self.assertEqual(uninstall.data_summary(data), (0, 0))
++            self.assertEqual(uninstall.remove_data(data), [])
++
++    def test_remove_startup(self):
++        with tempfile.TemporaryDirectory() as tmp:
++            lnk = os.path.join(tmp, "PhraseLock.lnk")
++            self.assertFalse(uninstall.remove_startup(lnk))
++            open(lnk, "w").close()
++            self.assertTrue(uninstall.remove_startup(lnk))
++            self.assertFalse(os.path.exists(lnk))
++
++    def test_exe_delete_only_when_frozen_exe(self):
++        with tempfile.TemporaryDirectory() as tmp:
++            exe = os.path.join(tmp, "PhraseLock.exe")
++            open(exe, "w").close()
++            popen = mock.Mock()
++            self.assertFalse(uninstall.schedule_exe_delete(exe, False, popen))
++            self.assertFalse(uninstall.schedule_exe_delete(os.path.join(tmp, "python"), True, popen))
++            popen.assert_not_called()
++            self.assertTrue(uninstall.schedule_exe_delete(exe, True, popen))
++            self.assertIn(exe, popen.call_args[0][0][-1])
++
++    def test_human_size(self):
++        self.assertEqual(uninstall.human_size(512), "512 B")
++        self.assertEqual(uninstall.human_size(2048), "2.0 KB")
++
++
++class RunTests(unittest.TestCase):
++    def test_full_run_removes_everything_asked(self):
++        with tempfile.TemporaryDirectory() as tmp:
++            data = os.path.join(tmp, "PhraseLock")
++            os.makedirs(data)
++            open(os.path.join(data, "config.json"), "w").close()
++            lnk = os.path.join(tmp, "PhraseLock.lnk")
++            open(lnk, "w").close()
++            with mock.patch.object(uninstall, "find_processes", return_value=[]) as find:
++                report = uninstall.run_uninstall({"startup": True, "data": True}, data, lnk, "x.py", False)
++            find.assert_called_once()          # deleting data implies stopping first
++            self.assertFalse(os.path.exists(data))
++            self.assertFalse(os.path.exists(lnk))
++            self.assertTrue(any("Deleted your data" in line for line in report))
++
++    def test_nothing_selected_does_nothing(self):
++        with tempfile.TemporaryDirectory() as tmp:
++            data = os.path.join(tmp, "PhraseLock")
++            os.makedirs(data)
++            with mock.patch.object(uninstall, "find_processes") as find:
++                self.assertEqual(uninstall.run_uninstall({}, data, "", "x", False), [])
++            find.assert_not_called()
++            self.assertTrue(os.path.isdir(data))
++
++    def test_confirmation_text(self):
++        self.assertEqual(uninstall.confirmation_text({}, True), "")
++        text = uninstall.confirmation_text({"data": True, "exe": True}, True)
++        self.assertIn("DELETE", text)
++        self.assertIn("PhraseLock.exe", text)
++        self.assertNotIn("PhraseLock.exe", uninstall.confirmation_text({"data": True, "exe": True}, False))
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/uninstall.py b/uninstall.py
+new file mode 100644
+index 0000000..f4d2ced
+--- /dev/null
++++ b/uninstall.py
+@@ -0,0 +1,284 @@
++"""Uninstall and cleanup: stop PhraseLock, remove its start-with-Windows shortcut and its data.
++
++PhraseLock has no installer: it is one .exe plus a data folder (%APPDATA%\\PhraseLock) and an
++optional shortcut in the Startup folder. This module undoes all of that on request. Everything
++that touches the system takes its paths as arguments so it can be tested; the window that asks
++what to remove (``ask_options``) is the only Tk part.
++"""
++
++import os
++import shutil
++import subprocess
++
++SCRIPT_NAMES = ("phrase_lock.py", "PhraseLockWatchdog.py")
++WATCHDOG_EXE_NAMES = ("phraselockwatchdog.exe",)
++
++
++# ---------------------------------------------------------------------------
++# processes
++# ---------------------------------------------------------------------------
++
++def _norm(path):
++    return os.path.normcase(os.path.abspath(str(path)))
++
++
++def classify(info, exe_path, frozen):
++    """"watchdog", "app" or None for a process described by ``{"exe": ..., "cmdline": [...]}``."""
++    exe = info.get("exe")
++    args = [str(a) for a in (info.get("cmdline") or [])]
++    if frozen:
++        if exe and str(exe).replace("\\", "/").rsplit("/", 1)[-1].lower() in WATCHDOG_EXE_NAMES:
++            return "watchdog"
++        if exe and exe_path and _norm(exe) == _norm(exe_path):
++            return "watchdog" if "--watchdog" in args else "app"
++        return None
++    names = [os.path.basename(a) for a in args[:3]]
++    if "PhraseLockWatchdog.py" in names:
++        return "watchdog"
++    if "phrase_lock.py" in names:
++        return "watchdog" if "--watchdog" in args else "app"
++    return None
++
++
++def find_processes(exe_path, frozen, own_pids=(), process_iter=None):
++    """[{"pid", "role"}] for the other PhraseLock processes (never *own_pids*)."""
++    if process_iter is None:
++        try:
++            import psutil
++        except ImportError:
++            return []
++        process_iter = lambda: psutil.process_iter(["pid", "exe", "cmdline"])   # noqa: E731
++    found = []
++    for proc in process_iter():
++        try:
++            info = proc.info
++            if info.get("pid") in own_pids:
++                continue
++            role = classify(info, exe_path, frozen)
++        except Exception:
++            continue
++        if role:
++            found.append({"pid": info["pid"], "role": role})
++    return sorted(found, key=lambda p: (p["role"] != "watchdog", p["pid"]))
++
++
++def stop_processes(processes, grace=3.0):
++    """Stop the watchdog first (so it cannot restart anything), then the rest.
++
++    Returns (stopped, failed) lists of pids.
++    """
++    try:
++        import psutil
++    except ImportError:
++        return [], [p["pid"] for p in processes]
++    stopped, failed = [], []
++    for role in ("watchdog", "app"):
++        batch = []
++        for item in (p for p in processes if p["role"] == role):
++            try:
++                proc = psutil.Process(item["pid"])
++                proc.terminate()
++                batch.append(proc)
++            except psutil.NoSuchProcess:
++                stopped.append(item["pid"])
++            except (psutil.AccessDenied, OSError):
++                failed.append(item["pid"])
++        gone, alive = psutil.wait_procs(batch, timeout=grace)
++        stopped.extend(p.pid for p in gone)
++        for proc in alive:
++            try:
++                proc.kill()
++                proc.wait(timeout=grace)
++                stopped.append(proc.pid)
++            except Exception:
++                failed.append(proc.pid)
++    return stopped, failed
++
++
++# ---------------------------------------------------------------------------
++# files
++# ---------------------------------------------------------------------------
++
++def data_summary(config_dir):
++    """(number of files, total bytes) in the data folder; (0, 0) when it does not exist."""
++    count = size = 0
++    for folder, _dirs, files in os.walk(config_dir):
++        for name in files:
++            count += 1
++            try:
++                size += os.path.getsize(os.path.join(folder, name))
++            except OSError:
++                pass
++    return count, size
++
++
++def human_size(size):
++    for unit in ("B", "KB", "MB", "GB"):
++        if size < 1024 or unit == "GB":
++            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
++        size /= 1024.0
++
++
++def remove_data(config_dir):
++    """Delete the data folder. Returns the paths that could not be removed."""
++    failed = []
++    if not os.path.isdir(config_dir):
++        return failed
++
++    def on_error(_func, path, _exc):
++        failed.append(path)
++
++    shutil.rmtree(config_dir, onerror=on_error)
++    return failed
++
++
++def remove_startup(shortcut_path):
++    """Delete the Startup shortcut. True when it existed and is gone."""
++    if shortcut_path and os.path.exists(shortcut_path):
++        os.remove(shortcut_path)
++        return True
++    return False
++
++
++def schedule_exe_delete(exe_path, frozen, popen=subprocess.Popen):
++    """After this process exits, delete the .exe. Only for the packaged build."""
++    if not frozen or not exe_path or not str(exe_path).lower().endswith(".exe") or '"' in str(exe_path):
++        return False
++    if not os.path.isfile(exe_path):
++        return False
++    command = f'ping -n 4 127.0.0.1 >nul & del /f /q "{exe_path}"'
++    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "DETACHED_PROCESS", 0)
++    popen(["cmd", "/c", command], creationflags=flags, close_fds=True)
++    return True
++
++
++# ---------------------------------------------------------------------------
++# the whole thing
++# ---------------------------------------------------------------------------
++
++def run_uninstall(options, config_dir, startup_path, exe_path, frozen, own_pids=(), grace=3.0):
++    """Do what *options* asks for. Returns the report as a list of text lines.
++
++    options: {"stop": bool, "startup": bool, "data": bool, "exe": bool}. Deleting data or the .exe
++    always stops the running PhraseLock first, otherwise it would just come back.
++    """
++    report = []
++    stop = options.get("stop") or options.get("data") or options.get("exe")
++
++    if options.get("startup"):
++        try:
++            report.append("Start-with-Windows shortcut removed." if remove_startup(startup_path)
++                          else "There was no start-with-Windows shortcut.")
++        except OSError as exc:
++            report.append(f"Could not remove the start-with-Windows shortcut: {exc}")
++
++    if stop:
++        processes = find_processes(exe_path, frozen, own_pids)
++        stopped, failed = stop_processes(processes, grace) if processes else ([], [])
++        if processes:
++            report.append(f"Stopped {len(stopped)} PhraseLock process(es).")
++        else:
++            report.append("No other PhraseLock process was running.")
++        if failed:
++            report.append(f"Could not stop process(es) {', '.join(map(str, failed))}: close them from the Task Manager.")
++
++    if options.get("data"):
++        count, size = data_summary(config_dir)
++        failed_paths = remove_data(config_dir)
++        if failed_paths:
++            report.append(f"Some data could not be deleted ({len(failed_paths)} item(s)); delete the folder {config_dir} yourself.")
++        else:
++            report.append(f"Deleted your data ({count} file(s), {human_size(size)}).")
++
++    if options.get("exe"):
++        report.append("PhraseLock.exe will be deleted a few seconds after this window closes."
++                      if schedule_exe_delete(exe_path, frozen)
++                      else "PhraseLock.exe was not deleted: delete it yourself.")
++    elif frozen and options.get("data"):
++        report.append(f"You can now delete PhraseLock.exe ({exe_path}).")
++    return report
++
++
++# ---------------------------------------------------------------------------
++# window
++# ---------------------------------------------------------------------------
++
++def ask_options(root, frozen, config_dir, startup_exists):
++    """Modal dialog: what to remove. Returns an options dict, or None when cancelled."""
++    import tkinter as tk
++    import uikit
++    from uikit import UI_FONT, Switch
++
++    P = uikit.P
++    count, size = data_summary(config_dir)
++    result = {"value": None}
++    win = tk.Toplevel(root)
++    win.title("Uninstall and cleanup")
++    win.configure(bg=P["BG"])
++    win.geometry("600x560")
++    win.resizable(False, False)
++    win.transient(root)
++
++    tk.Label(win, text="Uninstall and cleanup", font=(UI_FONT, 18, "bold"), fg=P["TEXT"], bg=P["BG"]).pack(
++        anchor="w", padx=28, pady=(24, 4))
++    tk.Label(win, text="Choose what to remove. Nothing happens until you confirm on the next screen.",
++             font=(UI_FONT, 10), fg=P["MUTED"], bg=P["BG"], wraplength=540, justify="left").pack(anchor="w", padx=28)
++
++    stop_var = tk.BooleanVar(value=True)
++    startup_var = tk.BooleanVar(value=True)
++    data_var = tk.BooleanVar(value=False)
++    exe_var = tk.BooleanVar(value=False)
++
++    def row(text, detail, var, enabled=True):
++        box = tk.Frame(win, bg=P["BG"])
++        box.pack(fill="x", padx=28, pady=(14, 0))
++        Switch(box, text=text, variable=var, state="normal" if enabled else "disabled",
++               font=(UI_FONT, 11, "bold")).pack(anchor="w")
++        tk.Label(box, text=detail, font=(UI_FONT, 9), fg=P["MUTED"], bg=P["BG"], wraplength=520,
++                 justify="left").pack(anchor="w", padx=(48, 0), pady=(0, 0))
++
++    row("Stop PhraseLock", "Closes the background monitor, the tray icon and the watchdog (Auto-protection) "
++        "so nothing restarts.", stop_var)
++    row("Remove the start-with-Windows shortcut",
++        "It is there now." if startup_exists else "There is none at the moment.", startup_var)
++    row("Delete my settings, stats and packs",
++        f"The folder {config_dir} ({count} file(s), {human_size(size)}): settings, emergency password, "
++        "stats, your own packs and logs. Use Export in the main window first if you want a backup.", data_var)
++    row("Delete PhraseLock.exe afterwards",
++        "Removes the program file a few seconds after the window closes." if frozen
++        else "Only available in the packaged PhraseLock.exe. From source, delete the folder yourself.",
++        exe_var, enabled=frozen)
++
++    def on_continue():
++        result["value"] = {"stop": stop_var.get(), "startup": startup_var.get(),
++                           "data": data_var.get(), "exe": bool(exe_var.get() and frozen)}
++        win.destroy()
++
++    buttons = tk.Frame(win, bg=P["BG"])
++    buttons.pack(side="bottom", fill="x", padx=28, pady=22)
++    tk.Button(buttons, text="Continue", command=on_continue, bg=P["ACCENT"], fg=P["ACCENT_TEXT"], relief="flat",
++              bd=0, highlightthickness=0, padx=24, pady=9, cursor="hand2",
++              font=(UI_FONT, 10, "bold")).pack(side="right")
++    tk.Button(buttons, text="Cancel", command=win.destroy, bg=P["CARD_ALT"], fg=P["TEXT"], relief="flat", bd=0,
++              highlightthickness=0, padx=24, pady=9, cursor="hand2",
++              font=(UI_FONT, 10, "bold")).pack(side="right", padx=(0, 10))
++    win.bind("<Escape>", lambda _e: win.destroy())
++    win.grab_set()
++    win.wait_window()
++    return result["value"]
++
++
++def confirmation_text(options, frozen):
++    """The summary shown before anything is done."""
++    lines = []
++    if options.get("stop") or options.get("data") or options.get("exe"):
++        lines.append("- stop PhraseLock, its tray icon and its watchdog")
++    if options.get("startup"):
++        lines.append("- remove the start-with-Windows shortcut")
++    if options.get("data"):
++        lines.append("- DELETE your settings, emergency password, stats, packs and logs")
++    if options.get("exe") and frozen:
++        lines.append("- delete PhraseLock.exe")
++    if not lines:
++        return ""
++    return "PhraseLock will:\n" + "\n".join(lines) + "\n\nThis cannot be undone. Continue?"

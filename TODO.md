@@ -15,8 +15,11 @@ Tick a box when a feature is done (clickable on GitHub).
 - [x] Add theme pack : TechDom, PetDom
 - [ ] Add more default theme packs : Mommy/Daddy, Master/Mistress, Brat Tamer, FinDom, more...
 - [x] Add a "What's new?" window after updates
-- [ ] 🆕 Add a clear uninstall and cleanup process
+- [x] Add a clear uninstall and cleanup process
 - [ ] 🆕 Make the creation of file with new sebtence easier
+- [ ] 🆕 Add multiple confirmation message if want to use the emergency password with penality potentially
+- [ ] Add an update checker that compares the installed version with the latest GitHub release
+- [ ] Add an exit option on the tray
 
 ## 🟠 Medium priority
 
@@ -32,15 +35,12 @@ Tick a box when a feature is done (clickable on GitHub).
 - [x] Add GitHub issue templates (Bug report, Feedback)
 - [ ] Add more unit tests, especially for `phrases.py` (CSV, JSON and TXT parsing) and `config.py`
 - [ ] Add an update checker that compares the installed version with the latest GitHub release
-- [ ] Add an exit option on the tray
 - [ ] 🆕 Add text positioning controls (top, center, bottom, or custom position)
 - [ ] 🆕 Add an optional progress bar showing how much of the phrase has been typed correctly
 - [ ] 🆕 Add a choice between resetting the whole phrase or keeping the correctly typed portion after a mistake
-- [ ] 🆕 Add multiple configuration profiles (Work, Gaming, Streaming, Sleep, etc.)
 - [ ] 🆕 Add one-click profile switching from the system tray
 - [ ] 🆕 Add a "Reset to defaults" button with a confirmation dialog
 - [ ] 🆕 Add a local API or plugin system for third-party integrations (Discord integration?)
-- [ ] 🆕 Add multiple confirmation message if want to use the emergency password with penality potentially
 
 ## 🟢 Low priority
 
