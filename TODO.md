@@ -10,10 +10,11 @@ Tick a box when a feature is done (clickable on GitHub).
 - [x] Add a panic hotkey or a "disable for X minutes" option that doesn't require the full challenge
 - [ ] Add a crash-loop guard: if the app or the watchdog fails several times in a row, it disables itself automatically
 - [x] Add a `LICENSE` file to the repo
-- [ ] 🆕 Add a first-launch setup wizard to guide users through their initial configuration
-- [ ] 🆕 Add a theme editor to create, rename, duplicate, and delete custom themes
-- [ ] Add default theme packs (TechDom, PetDom, Mommy/Daddy, Master/Mistress, Brat Tamer, FinDom, etc.)
-- [ ] 🆕 Add a "What's new?" window after updates
+- [x] Add a first-launch setup wizard to guide users through their initial configuration
+- [x] Add a theme editor to create, rename, duplicate, and delete custom themes
+- [x] Add theme pack : TechDom, PetDom
+- [ ] Add more default theme packs : Mommy/Daddy, Master/Mistress, Brat Tamer, FinDom, more...
+- [ ] Add a "What's new?" window after updates
 - [ ] 🆕 Add a clear uninstall and cleanup process
 - [ ] 🆕 Make the creation of file with new sebtence easier
 

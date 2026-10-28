@@ -241,8 +241,8 @@ def main(start_tab=None):
     # ---------------------------------------------------------------- header
     header = tk.Frame(root, bg=UI_BG, highlightthickness=1, highlightbackground=BORDER)
     header.pack(fill="x", padx=12, pady=(12, 6))
-    tk.Label(header, text="// PHRASELOCK :: CONTROL NODE", font=("Consolas", 9, "bold"), fg=CYAN, bg=UI_BG).pack(anchor="w", padx=14, pady=(8, 0))
-    tk.Label(header, text="TECHDOM / DISCIPLINE PROTOCOL", font=("Bahnschrift", 18, "bold"), fg=TEXT, bg=UI_BG).pack(anchor="w", padx=14, pady=(0, 8))
+    tk.Label(header, text=themes.ui_text(cfg, "app_kicker", "// PHRASELOCK :: CONTROL NODE"), font=("Consolas", 9, "bold"), fg=CYAN, bg=UI_BG).pack(anchor="w", padx=14, pady=(8, 0))
+    tk.Label(header, text=themes.ui_text(cfg, "app_title", "PHRASELOCK / DISCIPLINE PROTOCOL"), font=("Bahnschrift", 18, "bold"), fg=TEXT, bg=UI_BG).pack(anchor="w", padx=14, pady=(0, 8))
 
     # Master activation toggle: controls whether PhraseLock appears after a
     # Windows unlock. Preview/Settings stay usable while disabled.
@@ -410,6 +410,12 @@ def main(start_tab=None):
         tk.Button(pack_btns, text="Apply pack...", command=lambda: on_apply_pack()).pack(side="left")
         tk.Button(pack_btns, text="Undo last pack", command=lambda: on_undo_pack()).pack(side="left", padx=(8, 0))
         tk.Button(pack_btns, text="Open pack folder", command=lambda: on_open_pack_folder()).pack(side="left", padx=(8, 0))
+        my_pack_btns = tk.Frame(t_look)
+        my_pack_btns.pack(anchor="w", padx=20, pady=(0, 6))
+        tk.Button(my_pack_btns, text="Save my settings as a pack...", command=lambda: on_save_my_pack()).pack(side="left")
+        tk.Button(my_pack_btns, text="Open my packs folder", command=lambda: on_open_my_packs()).pack(side="left", padx=(8, 0))
+        note(t_look, "Your own packs live in %APPDATA%\\PhraseLock\\packs\\<name>\\pack.json. Edit it to change the "
+                     "window title (ui_texts: app_kicker, app_title), texts and rules.", size=8)
         note(t_look, "Your own images, GIFs and sounds go in the pack folder (backgrounds\\ and audio\\). "
                      "Apply the pack again after adding images.", size=8)
     else:
@@ -1402,6 +1408,32 @@ def main(start_tab=None):
             os.startfile(packs.install_pack_assets(pack["id"]))
         except (packs.PackError, OSError, AttributeError) as exc:
             messagebox.showerror("Theme pack", f"Could not open the pack folder:\n{exc}", parent=root)
+
+    def on_save_my_pack():
+        current = current_settings()
+        if current is None:
+            return
+        name = simpledialog.askstring("My pack", "Name of your new pack:", parent=root)
+        if name is None:
+            return
+        try:
+            pack_id, folder, warnings = packs.export_pack(current, name)
+        except (packs.PackError, OSError) as exc:
+            messagebox.showerror("My pack", str(exc), parent=root)
+            return
+        text = f"Pack saved in:\n{folder}\n\nIt now appears in the pack list. Edit its pack.json to change the window title and texts."
+        if warnings:
+            text += "\n\nNotes:\n- " + "\n- ".join(warnings)
+        messagebox.showinfo("My pack", text, parent=root)
+        reopen["tab"] = "home" if notebook.select() == str(tab_by_key.get("home")) else "look"
+        root.destroy()
+
+    def on_open_my_packs():
+        try:
+            os.makedirs(packs.user_root(), exist_ok=True)
+            os.startfile(packs.user_root())
+        except (OSError, AttributeError) as exc:
+            messagebox.showerror("My pack", f"Could not open the folder:\n{exc}", parent=root)
 
     saved_msg_var = tk.StringVar()
     saved_clear = {"job": None}

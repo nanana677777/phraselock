@@ -446,3 +446,134 @@ class BackupInteropTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class UserPackTests(unittest.TestCase):
+    """Packs made by the user live in %APPDATA%\\PhraseLock\\packs and must work like shipped ones."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.mine = os.path.join(self.tmp.name, "mine")
+        os.makedirs(self.mine)
+        self.undo = os.path.join(self.tmp.name, "undo.json")
+        patcher = mock.patch.object(packs, "user_root", return_value=self.mine)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def write_pack(self, pack_id, name, **extra):
+        data = {"name": name, "config": {"theme": "Matrix", "title": "Mine"}, **extra}
+        write(os.path.join(self.mine, pack_id, "pack.json"), json.dumps(data))
+
+    def test_user_packs_are_listed_with_the_shipped_ones(self):
+        self.write_pack("cozy", "Cozy")
+        ids = {p["id"] for p in packs.list_packs()}
+        self.assertTrue({"techdom", "petdom", "cozy"} <= ids)
+
+    def test_user_pack_wins_over_a_shipped_one_with_the_same_id(self):
+        self.write_pack("techdom", "My TechDom")
+        found = {p["id"]: p["name"] for p in packs.list_packs()}
+        self.assertEqual(found["techdom"], "My TechDom")
+
+    def test_a_broken_user_pack_is_skipped(self):
+        write(os.path.join(self.mine, "broken", "pack.json"), "{not json")
+        self.assertNotIn("broken", {p["id"] for p in packs.list_packs()})
+
+    def test_user_pack_can_be_applied_in_place(self):
+        self.write_pack("cozy", "Cozy", ui_texts={"app_title": "COZY CORNER"})
+        write(os.path.join(self.mine, "cozy", "backgrounds", "a.png"), "x")
+        new, warnings = packs.apply_pack(dict(DEFAULT_CONFIG), "cozy", undo_path=self.undo)
+        self.assertEqual((new["theme"], new["title"]), ("Matrix", "Mine"))
+        self.assertEqual(new["ui_texts"]["app_title"], "COZY CORNER")
+        self.assertEqual(new["background_images"], [os.path.join(self.mine, "cozy", "backgrounds", "a.png")])
+        self.assertTrue(os.path.isfile(os.path.join(self.mine, "cozy", "pack.json")))   # nothing lost
+        self.assertEqual(warnings, [])
+
+    def test_shipped_packs_still_apply_with_user_packs_around(self):
+        self.write_pack("cozy", "Cozy")
+        new, _ = packs.apply_pack(dict(DEFAULT_CONFIG), "techdom", undo_path=self.undo)
+        self.assertEqual(new["theme"], "TechDom")
+
+    def test_every_shipped_pack_has_its_window_title(self):
+        for pack_id in ("techdom", "petdom"):
+            texts = packs.load_pack(pack_id, REPO_PACKS)["ui_texts"]
+            self.assertTrue(texts["app_title"].strip() and texts["app_kicker"].strip(), pack_id)
+
+    def test_window_title_texts_use_the_pack_and_fall_back(self):
+        cfg = {"ui_texts": themes.clean_ui_texts({"app_title": "COZY CORNER"})}
+        self.assertEqual(themes.ui_text(cfg, "app_title", "DEFAULT"), "COZY CORNER")
+        self.assertEqual(themes.ui_text(cfg, "app_kicker", "// DEFAULT"), "// DEFAULT")
+        self.assertEqual(themes.ui_text({}, "app_title", "DEFAULT"), "DEFAULT")
+
+
+class ExportPackTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dest = os.path.join(self.tmp.name, "mine")
+        self.src = os.path.join(self.tmp.name, "files")
+        self.phrases = os.path.join(self.src, "my phrases.csv")
+        self.sound = os.path.join(self.src, "ding.wav")
+        self.image = os.path.join(self.src, "wall.png")
+        write(self.phrases, "phrase,category,difficulty\nHello there,x,easy\n")
+        write(self.sound, "RIFF")
+        write(self.image, "png")
+        self.cfg = {**DEFAULT_CONFIG, "theme": "Matrix", "title": "Mine", "required_repeats": 3,
+                    "phrases_file": self.phrases, "success_sound": self.sound,
+                    "background_images": [self.image, "https://example.com/x.png"],
+                    "ui_texts": {"button": "[ GO ]"}, "emergency_password_hash": "ab12"}
+
+    def export(self, name="Cozy Corner", cfg=None):
+        return packs.export_pack(self.cfg if cfg is None else cfg, name, dest_root=self.dest)
+
+    def test_creates_a_valid_pack_folder(self):
+        pack_id, folder, warnings = self.export()
+        self.assertEqual(pack_id, "cozy-corner")
+        data = packs.load_pack(pack_id, self.dest)
+        self.assertEqual(data["name"], "Cozy Corner")
+        self.assertEqual(data["config"]["theme"], "Matrix")
+        self.assertEqual(data["config"]["required_repeats"], 3)
+        self.assertEqual(data["ui_texts"]["button"], "[ GO ]")
+        self.assertEqual(data["ui_texts"]["app_title"], "COZY CORNER")
+        self.assertEqual(warnings, [])
+        for rel in ("phrases_file", "success_sound"):
+            self.assertTrue(os.path.isfile(os.path.join(folder, data["config"][rel])), rel)
+        self.assertEqual(os.listdir(os.path.join(folder, "backgrounds")), ["wall.png"])
+
+    def test_it_never_copies_secrets_or_unlisted_settings(self):
+        pack_id, _folder, _ = self.export()
+        text = json.dumps(packs.load_pack(pack_id, self.dest))
+        self.assertNotIn("ab12", text)
+        self.assertNotIn("emergency", text)
+        self.assertNotIn("schedule", text)
+
+    def test_exported_pack_applies_back_to_the_same_settings(self):
+        pack_id, _folder, _ = self.export()
+        new, warnings = packs.apply_pack(dict(DEFAULT_CONFIG), pack_id, source_root=self.dest,
+                                         dest_root=self.dest, undo_path=os.path.join(self.tmp.name, "u.json"))
+        self.assertEqual(warnings, [])
+        self.assertEqual((new["theme"], new["required_repeats"], new["title"]), ("Matrix", 3, "Mine"))
+        self.assertTrue(os.path.isfile(new["phrases_file"]) and os.path.isfile(new["success_sound"]))
+        self.assertEqual(len(new["background_images"]), 1)
+
+    def test_custom_theme_is_left_out_with_a_warning(self):
+        _id, _folder, warnings = self.export("Odd", {**self.cfg, "theme": "My own"})
+        self.assertTrue(warnings)
+        self.assertNotIn("theme", packs.load_pack("odd", self.dest)["config"])
+
+    def test_existing_or_shipped_names_are_refused(self):
+        self.export("Cozy")
+        with self.assertRaises(packs.PackError):
+            self.export("cozy")
+        with mock.patch.object(packs, "bundled_root", return_value=REPO_PACKS):
+            with self.assertRaises(packs.PackError):
+                packs.export_pack(self.cfg, "TechDom")
+
+    def test_bad_names_are_refused(self):
+        for bad in ("", "   ", "x" * 41, "!!!", "***"):
+            with self.assertRaises(packs.PackError, msg=bad):
+                self.export(bad)
+
+    def test_name_to_id(self):
+        self.assertEqual(packs.pack_id_from_name("  My Cozy_Pack! "), "my-cozy_pack")
+        self.assertEqual(packs.pack_id_from_name("???"), "")

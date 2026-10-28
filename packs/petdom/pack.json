@@ -34,6 +34,8 @@
     "lockout_seconds": 20
   },
   "ui_texts": {
+    "app_kicker": "// JUNO :: TRAINING ROOM",
+    "app_title": "PETDOM / GOOD PET PROTOCOL",
     "header": "~ JUNO'S TRAINING SESSION ~",
     "subtitle": "SIT. STAY. TYPE IT NICELY.",
     "button": "[ GOOD PET ]",

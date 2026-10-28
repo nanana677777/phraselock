@@ -125,10 +125,10 @@ def copy_name(base, taken):
 # interface texts
 # --------------------------------------------------------------------------
 
-# Every text the lock screen shows that a theme pack may replace. A pack stores
+# Every text the lock screen (and the Settings window title) shows that a theme pack may replace. A pack stores
 # its own versions in the ``ui_texts`` setting; anything it leaves out keeps the
 # default given at the call site in overlay.py.
-UI_TEXT_KEYS = ("header", "subtitle", "button", "errors", "lockout", "wait", "round")
+UI_TEXT_KEYS = ("app_kicker", "app_title", "header", "subtitle", "button", "errors", "lockout", "wait", "round")
 MAX_UI_TEXT_LENGTH = 80
 
 

@@ -11,6 +11,7 @@ Customize your phrases, choose a visual theme, track your progress, and make eac
 ## ✨ Features
 
 - **Custom typing challenges** — use your own phrases and challenge styles.
+- **Window title per style, and your own packs** — the Settings header (kicker and title) comes from the active pack's `ui_texts` (`app_kicker`, `app_title`). *Settings > Look > Save my settings as a pack...* turns your current look and rules into a pack of your own in `%APPDATA%\PhraseLock\packs\<name>\`; edit its `pack.json` to change the title and texts. Your packs appear in the pack list next to the shipped ones.
 - **First-launch setup wizard and a simple Home tab** — on first launch a short wizard asks for a style (TechDom, PetDom or the default look), a difficulty, how strict to be and an optional emergency password. New users then see only a **Home** tab with the essentials; *Show advanced settings* brings back Phrases, Look, Rules, Protection and Stats. Existing installs are unchanged.
 - **Theme editor** — *Settings > Look > Theme editor* creates, renames, duplicates and deletes your own colour themes (three colours each, with a picker). Built-in themes are duplicated to start from them.
 - **Theme packs** — one click in *Settings > Look* applies phrases, theme, backgrounds, sounds, interface texts and challenge rules together. Packs included: **TechDom** (a calm sysadmin called Vex) and **PetDom** (Juno, a warm but firm handler); the last pack can be undone, and a pack never touches your emergency password.

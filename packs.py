@@ -90,6 +90,14 @@ def user_root():
     return os.path.join(CONFIG_DIR, "packs")
 
 
+def resolve_root(pack_id):
+    """Where *pack_id*'s pack.json lives: your own packs folder first, then the bundled packs."""
+    mine = user_root()
+    if os.path.isfile(os.path.join(mine, pack_id, PACK_FILE)):
+        return mine
+    return bundled_root()
+
+
 def pack_folder(pack_id, root=None):
     return os.path.join(root or user_root(), pack_id)
 
@@ -106,7 +114,7 @@ def _check_id(pack_id):
 def load_pack(pack_id, root=None):
     """Read and minimally validate ``packs/<id>/pack.json``."""
     _check_id(pack_id)
-    path = os.path.join(root or bundled_root(), pack_id, PACK_FILE)
+    path = os.path.join(root or resolve_root(pack_id), pack_id, PACK_FILE)
     try:
         with open(path, "r", encoding="utf-8-sig") as f:
             data = json.load(f)
@@ -122,10 +130,9 @@ def load_pack(pack_id, root=None):
     return data
 
 
-def list_packs(root=None):
-    """[{"id", "name", "description"}] for every valid pack, sorted by name."""
-    root = root or bundled_root()
-    found = []
+def _scan(root):
+    """{id: {"id", "name", "description"}} for the valid packs found in *root*."""
+    found = {}
     try:
         names = sorted(os.listdir(root))
     except OSError:
@@ -138,9 +145,23 @@ def list_packs(root=None):
         except PackError as exc:
             log(f"Skipping pack: {exc}")
             continue
-        found.append({"id": name, "name": data["name"].strip(),
-                      "description": str(data.get("description", "") or "").strip()})
-    return sorted(found, key=lambda p: p["name"].lower())
+        found[name] = {"id": name, "name": data["name"].strip(),
+                       "description": str(data.get("description", "") or "").strip()}
+    return found
+
+
+def list_packs(root=None):
+    """[{"id", "name", "description"}] for every valid pack, sorted by name.
+
+    Without *root*: the packs shipped with PhraseLock plus your own (a folder with a
+    pack.json in %APPDATA%\\PhraseLock\\packs). Your own pack wins over a bundled one with the same id.
+    """
+    if root:
+        found = _scan(root)
+    else:
+        found = _scan(bundled_root())
+        found.update(_scan(user_root()))
+    return sorted(found.values(), key=lambda p: p["name"].lower())
 
 
 # --------------------------------------------------------------------------
@@ -154,10 +175,14 @@ def install_pack_assets(pack_id, source_root=None, dest_root=None, overwrite=Fal
     sound the user dropped in or replaced is never lost.
     """
     _check_id(pack_id)
-    src = os.path.join(source_root or bundled_root(), pack_id)
+    src = os.path.join(source_root or resolve_root(pack_id), pack_id)
     dst = pack_folder(pack_id, dest_root)
     if not os.path.isdir(src):
         raise PackError(f"Pack '{pack_id}' was not found.")
+    if os.path.realpath(src) == os.path.realpath(dst):      # your own pack already lives there
+        os.makedirs(os.path.join(dst, "backgrounds"), exist_ok=True)
+        os.makedirs(os.path.join(dst, "audio"), exist_ok=True)
+        return dst
     for folder, _dirs, files in os.walk(src):
         rel = os.path.relpath(folder, src)
         target_dir = dst if rel == "." else os.path.join(dst, rel)
@@ -189,6 +214,84 @@ def _backgrounds(folder):
         return []
     return [os.path.join(bg_dir, n) for n in names
             if n.lower().endswith(IMAGE_EXTS) and os.path.isfile(os.path.join(bg_dir, n))]
+
+
+# --------------------------------------------------------------------------
+# making your own pack
+# --------------------------------------------------------------------------
+
+def pack_id_from_name(name):
+    pack_id = re.sub(r"[^a-z0-9_-]+", "-", (name or "").strip().lower()).strip("-_")[:40]
+    return pack_id if PACK_ID_RE.match(pack_id) else ""
+
+
+def _copy_local(path, folder, subfolder=""):
+    """Copy a local file into the pack folder; returns its path relative to the pack, or ''."""
+    if not isinstance(path, str) or not path.strip() or not os.path.isfile(path):
+        return ""
+    target_dir = os.path.join(folder, subfolder) if subfolder else folder
+    os.makedirs(target_dir, exist_ok=True)
+    base = os.path.basename(path)
+    target = os.path.join(target_dir, base)
+    n = 2
+    while os.path.exists(target):
+        stem, ext = os.path.splitext(base)
+        target = os.path.join(target_dir, f"{stem}-{n}{ext}")
+        n += 1
+    shutil.copy2(path, target)
+    return os.path.relpath(target, folder).replace(os.sep, "/")
+
+
+def export_pack(cfg, name, dest_root=None):
+    """Save the current look and rules as a pack of your own. Returns (pack_id, folder, warnings).
+
+    Local phrase, sound and background files are copied into the pack so it keeps working
+    if the originals move. The new pack shows up in the pack list and can be edited by hand
+    (``pack.json`` in the folder, including the window title under ``ui_texts``).
+    """
+    name = (name or "").strip()
+    if not name or len(name) > 40:
+        raise PackError("Give the pack a name of 1 to 40 characters.")
+    pack_id = pack_id_from_name(name)
+    if not pack_id:
+        raise PackError("Use letters or digits in the pack name.")
+    root = dest_root or user_root()
+    folder = os.path.join(root, pack_id)
+    if os.path.exists(os.path.join(folder, PACK_FILE)) or (
+            dest_root is None and os.path.isfile(os.path.join(bundled_root(), pack_id, PACK_FILE))):
+        raise PackError(f"A pack called '{pack_id}' already exists. Pick another name.")
+
+    warnings = []
+    config = {}
+    for key in sorted(APPLY_KEYS - set(PACK_FILE_KEYS)):
+        if key in cfg:
+            config[key] = cfg[key]
+    config = _clean_settings(config, APPLY_KEYS, warnings)
+    if config.get("theme") not in THEMES:
+        config.pop("theme", None)
+        warnings.append("Your custom theme is not part of the pack (packs use built-in themes), so the theme was left out.")
+
+    os.makedirs(folder, exist_ok=True)
+    phrases = _copy_local(cfg.get("phrases_file"), folder)
+    if phrases:
+        config["phrases_file"] = phrases
+    for key, label in (("success_sound", "audio"), ("error_sound", "audio")):
+        copied = _copy_local(cfg.get(key), folder, label)
+        if copied:
+            config[key] = copied
+    for source in list(cfg.get("background_images") or []):
+        if isinstance(source, str) and source.lower().endswith(IMAGE_EXTS):
+            _copy_local(source, folder, "backgrounds")
+    os.makedirs(os.path.join(folder, "backgrounds"), exist_ok=True)
+    os.makedirs(os.path.join(folder, "audio"), exist_ok=True)
+
+    ui_texts = clean_ui_texts(cfg.get("ui_texts"))
+    ui_texts.setdefault("app_kicker", "// PHRASELOCK :: CONTROL NODE")
+    ui_texts.setdefault("app_title", name.upper())
+    data = {"name": name, "version": 1, "description": "My own pack.",
+            "config": config, "ui_texts": ui_texts, "protections": {}}
+    save_json(os.path.join(folder, PACK_FILE), data)
+    return pack_id, folder, warnings
 
 
 # --------------------------------------------------------------------------

@@ -34,6 +34,8 @@
     "lockout_seconds": 30
   },
   "ui_texts": {
+    "app_kicker": "// VEX :: CONTROL NODE",
+    "app_title": "TECHDOM / DISCIPLINE PROTOCOL",
     "header": "// VEX :: ACCESS CONTROL",
     "subtitle": "USER AUTHENTICATION  /  COMPLIANCE REQUIRED",
     "button": "[ SUBMIT FOR REVIEW ]",
