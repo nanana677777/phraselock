@@ -26,6 +26,8 @@ import packs
 import themes
 import uikit
 import uninstall
+import updatecheck
+import webbrowser
 import whatsnew
 import wizard
 from uikit import Switch, Dropdown, UI_FONT
@@ -343,7 +345,7 @@ def main(start_tab=None):
         "DAILY GOAL": "Daily goal", "SCHEDULE MATRIX": "Schedule", "FOCUS SESSION": "Focus session",
         "IDLE LOCK": "Idle lock", "EMERGENCY OVERRIDE": "Emergency password",
         "WATCHDOG / AUTO-PROTECTION": "Auto-protection", "PAUSE / PANIC": "Pause",
-        "BOOT SEQUENCE": "Start with Windows", "UNINSTALL": "Uninstall and cleanup", "LOCK SCREEN INFO": "Lock-screen info", "QUICK START": "Quick start",
+        "BOOT SEQUENCE": "Start with Windows", "UNINSTALL": "Uninstall and cleanup", "UPDATES": "Updates", "LOCK SCREEN INFO": "Lock-screen info", "QUICK START": "Quick start",
     }
 
     def heading(parent, text, color=None):
@@ -1383,6 +1385,7 @@ def main(start_tab=None):
             "show_round_counter": show_round_var.get(),
             "show_streak_line": show_streak_var.get(),
             "show_goal_line": show_goal_var.get(),
+            "check_updates": check_updates_var.get(),
             "emergency_confirmations": num(emergency_confirm_var, 3, 0, 5),
             "emergency_penalty_streak": emergency_streak_var.get(),
             "emergency_penalty_xp": num(emergency_xp_var, 0, 0, 500),
@@ -1686,6 +1689,52 @@ def main(start_tab=None):
     tk.Button(home_more, text="Run the setup wizard again...", command=on_rerun_wizard).pack(side="left")
     tk.Button(home_more, text="What's new?", command=on_show_news).pack(side="left", padx=(8, 0))
     tk.Label(home_more, text=f"PhraseLock {__version__}", font=(UI_FONT, 9), fg=MUTED).pack(side="left", padx=(12, 0))
+
+    heading(t_home, "UPDATES")
+    check_updates_var = tk.BooleanVar(value=cfg.get("check_updates", True))
+    update_status_var = tk.StringVar(value=f"PhraseLock {__version__}")
+    update_result = {"value": None, "url": updatecheck.RELEASES_URL}
+    pad(Switch(t_home, text="Look for a new version once a day when Settings opens", variable=check_updates_var),
+        pady=(0, 4))
+    note(t_home, "One request to github.com to read the latest release. Nothing about you is sent.", size=8)
+    update_row = tk.Frame(t_home)
+    update_row.pack(anchor="w", padx=20, pady=(2, 12))
+    check_btn = tk.Button(update_row, text="Check for updates")
+    check_btn.pack(side="left")
+    download_btn = tk.Button(update_row, text="Download",
+                             command=lambda: webbrowser.open(update_result["url"]))
+    tk.Label(update_row, textvariable=update_status_var, font=(UI_FONT, 9), fg=MUTED).pack(side="left", padx=(12, 0))
+
+    def poll_update():
+        result = update_result["value"]
+        if result is None:
+            root.after(200, poll_update)
+            return
+        update_status_var.set(updatecheck.describe(result))
+        update_result["value"] = None
+        check_btn.config(state="normal")
+        if result["status"] == "newer":
+            update_result["url"] = result["url"]
+            download_btn.pack(side="left", padx=(8, 0), before=update_row.winfo_children()[-1])
+        elif result["status"] == "current":
+            download_btn.pack_forget()
+        if result["status"] != "error":
+            today = datetime.now().date().isoformat()
+            cfg["last_update_check"] = today
+            try:
+                save_config({**load_config(), "last_update_check": today})
+            except Exception:
+                pass
+
+    def start_update_check(_event=None):
+        check_btn.config(state="disabled")
+        update_status_var.set("Checking...")
+        updatecheck.check_in_background(lambda r: update_result.update(value=r))
+        root.after(200, poll_update)
+
+    check_btn.config(command=start_update_check)
+    if updatecheck.due(cfg) and cfg.get("setup_done", False):
+        root.after(1500, start_update_check)
     advanced_var.trace_add("write", apply_advanced_view)
     apply_advanced_view()
 

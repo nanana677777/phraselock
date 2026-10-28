@@ -185,6 +185,7 @@ Running the tests before building helps identify problems in the project's teste
 | `wizard.py`             | First-launch setup wizard            |
 | `whatsnew.py`, `version.py` | "What's new?" window after updates, current version |
 | `exit_app.py`           | "Exit PhraseLock" from the tray menu |
+| `updatecheck.py`        | Update checker (latest GitHub release) |
 | `uninstall.py`          | Uninstall and cleanup (processes, shortcut, data, exe) |
 | `packs/`                | Theme packs (`packs/techdom/` and `packs/petdom/` have their own README) |
 | `PhraseLockWatchdog.py` | Optional watchdog functionality      |
