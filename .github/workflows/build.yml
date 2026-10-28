@@ -21,7 +21,7 @@ jobs:
       - name: Unit tests
         run: python -m unittest discover -s tests -v
       - name: Build single PhraseLock.exe
-        run: pyinstaller --noconfirm --clean --onefile --noconsole --noupx --name PhraseLock --icon icon.ico --add-data "icon.ico;." --add-data "icon.png;." --add-data "packs;packs" --hidden-import settings --hidden-import PhraseLockWatchdog --hidden-import win32timezone --hidden-import tray --hidden-import appicon --hidden-import pystray._win32 phrase_lock.py
+        run: pyinstaller --noconfirm --clean --onefile --noconsole --noupx --name PhraseLock --icon icon.ico --add-data "icon.ico;." --add-data "icon.png;." --add-data "packs;packs" --add-data "CHANGELOG.md;." --hidden-import settings --hidden-import PhraseLockWatchdog --hidden-import win32timezone --hidden-import tray --hidden-import appicon --hidden-import pystray._win32 phrase_lock.py
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

@@ -14,7 +14,7 @@ Tick a box when a feature is done (clickable on GitHub).
 - [x] Add a theme editor to create, rename, duplicate, and delete custom themes
 - [x] Add theme pack : TechDom, PetDom
 - [ ] Add more default theme packs : Mommy/Daddy, Master/Mistress, Brat Tamer, FinDom, more...
-- [ ] Add a "What's new?" window after updates
+- [x] Add a "What's new?" window after updates
 - [ ] 🆕 Add a clear uninstall and cleanup process
 - [ ] 🆕 Make the creation of file with new sebtence easier
 

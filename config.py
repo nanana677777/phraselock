@@ -32,6 +32,7 @@ def self_command(*args):
 DEFAULT_CONFIG = {
     "enabled": True,
     "setup_done": False,         # the first-launch wizard has run (or was skipped)
+    "last_seen_version": "",      # newest version the "What's new?" window has been shown for
     "advanced_view": True,       # Settings: show every tab; the wizard switches it off for new users
     "phrases": ["My name is XXX, I wish to access my PC"],
     "phrases_file": "",

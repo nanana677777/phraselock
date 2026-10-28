@@ -23,7 +23,9 @@ import media
 import hotkeys
 import packs
 import themes
+import whatsnew
 import wizard
+from version import __version__
 
 CONFIG_DIR = phrase_lock.CONFIG_DIR
 CONFIG_PATH = phrase_lock.CONFIG_PATH
@@ -168,7 +170,8 @@ def main(start_tab=None):
     if wizard.should_run(cfg):
         cfg = wizard.run(cfg)        # first launch: guided setup, saves the config itself
         cfg = load_config()
-    reopen = {"tab": None, "wizard": False}   # set when the window should come straight back
+    cfg = whatsnew.run(cfg)          # after an update: what changed (remembers the version)
+    reopen = {"tab": None, "wizard": False, "news": False}   # set when the window should come straight back
     if cfg.get("enabled", True):
         try:
             ensure_phrase_lock_monitor()
@@ -1574,7 +1577,15 @@ def main(start_tab=None):
             reopen["wizard"] = True
             root.destroy()
 
-    pad(tk.Button(t_home, text="Run the setup wizard again...", command=on_rerun_wizard), pady=(0, 12))
+    def on_show_news():
+        reopen["news"] = True
+        root.destroy()
+
+    home_more = tk.Frame(t_home)
+    home_more.pack(anchor="w", padx=20, pady=(0, 12))
+    tk.Button(home_more, text="Run the setup wizard again...", command=on_rerun_wizard).pack(side="left")
+    tk.Button(home_more, text="What's new?", command=on_show_news).pack(side="left", padx=(8, 0))
+    tk.Label(home_more, text=f"PhraseLock {__version__}", font=("Consolas", 9), fg=MUTED).pack(side="left", padx=(12, 0))
     advanced_var.trace_add("write", apply_advanced_view)
     apply_advanced_view()
 
@@ -1657,6 +1668,9 @@ def main(start_tab=None):
     root.mainloop()
     if reopen["wizard"]:
         wizard.run(load_config())
+        main(start_tab="home")
+    elif reopen["news"]:
+        whatsnew.run(load_config(), force=True)
         main(start_tab="home")
     elif reopen["tab"]:
         main(start_tab=reopen["tab"])

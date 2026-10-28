@@ -12,6 +12,7 @@ import os
 
 import packs
 from config import CONFIG_PATH, load_config, log, save_json
+from version import __version__
 from stats import set_emergency_password
 
 MIN_PASSWORD_LENGTH = 6
@@ -105,6 +106,7 @@ def apply_choices(cfg, choices, source_root=None, dest_root=None, undo_path=None
     new["enabled"] = bool(answers["enabled"])
     new["setup_done"] = True
     new["advanced_view"] = False          # new users start on the simple Home tab
+    new["last_seen_version"] = __version__   # a brand-new install has nothing to catch up on
     return new, warnings
 
 
@@ -127,7 +129,7 @@ def summary_lines(choices, pack_name=None):
 
 def mark_skipped(cfg, config_path=None):
     """The user closed the wizard: remember that, keep every setting, show all tabs."""
-    new = {**cfg, "setup_done": True, "advanced_view": True}
+    new = {**cfg, "setup_done": True, "advanced_view": True, "last_seen_version": __version__}
     save_json(config_path or CONFIG_PATH, new)
     return new
 

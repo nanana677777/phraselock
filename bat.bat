@@ -24,7 +24,7 @@ if not exist icon.ico (
   echo ERROR: icon.ico is missing.
   goto :fail
 )
-pyinstaller --noconfirm --clean --onefile --noconsole --noupx --name PhraseLock --icon icon.ico --add-data "icon.ico;." --add-data "icon.png;." --add-data "packs;packs" --hidden-import settings --hidden-import PhraseLockWatchdog --hidden-import win32timezone --hidden-import tray --hidden-import pystray._win32 phrase_lock.py
+pyinstaller --noconfirm --clean --onefile --noconsole --noupx --name PhraseLock --icon icon.ico --add-data "icon.ico;." --add-data "icon.png;." --add-data "packs;packs" --add-data "CHANGELOG.md;." --hidden-import settings --hidden-import PhraseLockWatchdog --hidden-import win32timezone --hidden-import tray --hidden-import pystray._win32 phrase_lock.py
 if errorlevel 1 goto :fail
 echo.
 echo Build succeeded: %CD%\dist\PhraseLock.exe
