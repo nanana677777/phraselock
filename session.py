@@ -21,6 +21,7 @@ from config import (
     pause_remaining_seconds, toggle_pause,
 )
 from hotkeys import parse_hotkey, MOD_NOREPEAT
+from themes import accent_for
 from overlay import _overlay_is_running, _standby
 
 WM_WTSSESSION_CHANGE = getattr(win32con, "WM_WTSSESSION_CHANGE", 0x02B1)
@@ -84,10 +85,7 @@ def show_focus_session(cfg):
     root.title("PhraseLock // FOCUS SESSION")
     root.geometry("460x230+40+40")
     root.configure(bg="#07070b")
-    accent = {"Cyber Red": "#ff1744", "Neon Pink": "#ff2aa3",
-              "Cyber Blue": "#2979ff", "Matrix": "#00e676",
-              "Dark Purple": "#9c27ff", "Blackout": "#eeeeee"}.get(
-        cfg.get("theme", "Cyber Red"), "#ff1744")
+    accent = accent_for(cfg.get("theme", "Cyber Red"))
     tk.Label(root, text="// FOCUS SESSION", font=("Consolas", 12, "bold"),
              fg=accent, bg="#07070b").pack(anchor="w", padx=20, pady=(18, 3))
     tk.Label(root, text="DISCIPLINE WINDOW ACTIVE", font=("Consolas", 9),

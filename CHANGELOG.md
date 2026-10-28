@@ -8,6 +8,20 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Theme packs, first pack: TechDom.** *Settings > Look > Theme pack* applies a whole preset in
+  one click: a phrase file, theme and colours, background images and GIFs, success/error sounds,
+  lock-screen wording and challenge rules (rounds, paste, delay, attempts, lockout). TechDom is a
+  calm systems administrator called Vex: cyan terminal look, 28 phrases (easy to extreme),
+  access-control texts, three original background images (grid, circuit, data stream) and generated `.wav` sounds, so the pack works as soon as it is applied. A pack lives in `packs/<name>/` and its files are
+  copied to `%APPDATA%\PhraseLock\packs\<name>\` (*Open pack folder* opens it), where your own
+  images, GIFs and sounds are never overwritten.
+- Packs only change an allow-list of settings: never the emergency password, auto-protection or
+  the schedule. Protections (strict mode, idle lock) are opt-in and refused without an emergency
+  password. *Undo last pack* puts the previous values back. Applying the same pack again (for new images, say) keeps the way back to your original settings.
+- New `TechDom` theme, new setting `ui_texts` (lock-screen wording, empty = built-in texts), new
+  modules `themes.py` (one colour table now shared by the lock screen, the focus window and the
+  Settings window) and `packs.py`, and unit tests (`tests/test_packs.py`). Imported backups have their lock-screen texts and background list validated, and a missing pack file now tells you to apply the pack again. The `packs` folder is
+  bundled into `PhraseLock.exe`.
 - **Pause without the challenge.** Right-click the tray icon > *Pause PhraseLock* (5 minutes,
   15 minutes, 30 minutes or 1 hour) and *Resume now*. While paused nothing locks: not after a
   Windows lock or unlock, not by the idle lock, and a lock screen that is already showing

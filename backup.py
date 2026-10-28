@@ -32,6 +32,7 @@ from datetime import date, datetime
 from typing import List, Optional
 
 from config import CONFIG_PATH, STATS_PATH, STREAK_PATH, DEFAULT_CONFIG, save_json, log
+from themes import clean_ui_texts
 
 BACKUP_FORMAT = "phraselock-backup"
 BACKUP_VERSION = 1
@@ -218,6 +219,16 @@ def sanitize_config(raw):
         if key in ("emergency_password_salt", "emergency_password_hash") and not HEX_RE.match(value):
             reject("not a valid hash")
             continue
+        if key == "ui_texts":          # lock-screen wording set by a theme pack
+            if not isinstance(value, dict):
+                reject()
+                continue
+            value = clean_ui_texts(value)
+        if key == "background_images" and value is not None:
+            if not isinstance(value, list) or not all(isinstance(x, str) for x in value):
+                reject("expected a list of text")
+                continue
+            value = [x.strip() for x in value if x.strip()]
 
         clean[key] = value
 
@@ -235,10 +246,15 @@ def sanitize_config(raw):
             # Older configs relied on the default count when none was stored.
             clean["emergency_password_iterations"] = DEFAULT_CONFIG["emergency_password_iterations"]
 
-    for key in PATH_KEYS:
-        value = clean.get(key, "")
+    paths = [(key, clean.get(key, "")) for key in PATH_KEYS]
+    paths += [("background_images", item) for item in (clean.get("background_images") or [])
+              if item != clean.get("background_image")]
+    for key, value in paths:
         if value and not value.lower().startswith(("http://", "https://")) and not os.path.exists(value):
-            warnings.append(f"File not found on this PC for '{key}': {value}")
+            hint = ""
+            if re.search(r"[\\/]PhraseLock[\\/]packs[\\/]", value):
+                hint = " (it belongs to a theme pack: apply the pack again in Settings > Look)"
+            warnings.append(f"File not found on this PC for '{key}': {value}{hint}")
 
     return clean, warnings
 

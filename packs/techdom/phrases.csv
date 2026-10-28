@@ -1,0 +1,29 @@
+phrase,category,difficulty
+I am a managed device.,Identity,easy
+Access is granted by Vex.,Access,easy
+I do not set my own permissions.,Access,easy
+Vex has root. I have a login.,Access,easy
+Request noted. Awaiting approval.,Compliance,easy
+I accept the policy without edits.,Compliance,easy
+My uptime belongs to Vex.,Identity,easy
+I will not bypass the restrictions.,Compliance,easy
+I follow the instructions exactly as written.,Compliance,normal
+Every action I take is logged and reviewed by Vex.,Audit,normal
+I do not negotiate with the administrator.,Access,normal
+My privileges are temporary and revocable.,Access,normal
+I am grateful for each permission I am given.,Identity,normal
+Unauthorized initiative has been disabled on this account.,Compliance,normal
+I submit my requests and wait for approval.,Compliance,normal
+Obedience is the default configuration of this user.,Identity,normal
+I accept that Vex decides when this session begins and ends.,Access,normal
+My errors are patched by Vex and never by me.,Identity,normal
+I understand that every attempt to bypass the system is recorded.,Audit,hard
+I do not request exceptions because the administrator has already considered them.,Compliance,hard
+Vex grants access one task at a time and I earn each one.,Access,hard
+I am not the administrator of this machine and I never was.,Identity,hard
+Compliance is not a setting I can turn off.,Compliance,hard
+My account remains under supervision until Vex decides otherwise.,Audit,hard
+I give full control of my permissions to Vex and I will type this sentence again as often as required.,Compliance,extreme
+"No shortcut, workaround or exception exists for me, because Vex has already closed every one of them.",Access,extreme
+I am a well-behaved user because the system corrects me every time I am not.,Identity,extreme
+I acknowledge that this audit is permanent and that my only task is to comply.,Audit,extreme

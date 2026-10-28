@@ -11,7 +11,7 @@ Customize your phrases, choose a visual theme, track your progress, and make eac
 ## ✨ Features
 
 - **Custom typing challenges** — use your own phrases and challenge styles.
-- **Techdom-inspired phrase pack** — add a little personality to your routine.
+- **Theme packs** — one click in *Settings > Look* applies phrases, theme, backgrounds, sounds, interface texts and challenge rules together. The first pack is **TechDom** (a calm sysadmin called Vex); the last pack can be undone, and a pack never touches your emergency password.
 - **Customizable settings** — configure the experience to suit your preferences.
 - **Progress tracking** — features in the source include streaks, daily goals, XP, levels, and badges.
 - **Phrase libraries** — support for external TXT, CSV, and JSON phrase collections.
@@ -171,6 +171,9 @@ Running the tests before building helps identify problems in the project's teste
 | `media.py`              | Media and audio functionality        |
 | `gifbg.py`              | Animated GIF background decoding and timing |
 | `hotkeys.py`            | Parsing of the pause hotkey text     |
+| `themes.py`             | Colour themes and lock-screen texts  |
+| `packs.py`              | Theme pack loading, applying, undo   |
+| `packs/`                | Theme packs (`packs/techdom/` has its own README) |
 | `PhraseLockWatchdog.py` | Optional watchdog functionality      |
 | `tray.py`               | System tray status icon              |
 | `appicon.py`            | Shared application icon helpers      |

@@ -21,6 +21,7 @@ from config import (
 )
 from media import play_audio, _remote_media_cache, pick_backgrounds
 import gifbg
+from themes import theme_colors, ui_text, error_text
 from stats import (
     get_progress, get_streak, get_xp_level,
     record_stat, update_streak, add_progress, verify_emergency_password,
@@ -319,15 +320,11 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
     progress_data = get_progress()
     level, level_xp, level_need = get_xp_level(progress_data.get("xp", 0))
 
-    theme_map = {
-        "Cyber Red": ("#ff1744", "#00e5ff", "#b400ff"),
-        "Neon Pink": ("#ff2aa3", "#7df9ff", "#c86bff"),
-        "Cyber Blue": ("#2979ff", "#00e5ff", "#7c4dff"),
-        "Matrix": ("#00e676", "#00ff41", "#76ff03"),
-        "Dark Purple": ("#9c27ff", "#e040fb", "#ff4081"),
-        "Blackout": ("#eeeeee", "#777777", "#444444"),
-    }
-    theme_red, theme_cyan, theme_purple = theme_map.get(theme, theme_map["Cyber Red"])
+    theme_red, theme_cyan, theme_purple = theme_colors(theme)
+
+    def round_text(done):
+        return ui_text(cfg, "round", "[ROUND] {done} / {total} COMPLETED", done=done, total=required)
+
     start_time = time.monotonic()
 
     if preview:
@@ -483,9 +480,11 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
     pad_x = 48
     content_w = panel_w - (pad_x * 2)
 
-    content.create_text(pad_x, 34, anchor="w", text="// PHRASELOCK :: CONTROL MODE",
+    content.create_text(pad_x, 34, anchor="w",
+                        text=ui_text(cfg, "header", "// PHRASELOCK :: CONTROL MODE"),
                         font=title_font, fill=tech_cyan)
-    content.create_text(pad_x, 65, anchor="w", text="DISCIPLINE PROTOCOL  /  INPUT REQUIRED",
+    content.create_text(pad_x, 65, anchor="w",
+                        text=ui_text(cfg, "subtitle", "DISCIPLINE PROTOCOL  /  INPUT REQUIRED"),
                         font=small_font, fill=tech_red)
 
     current_phrase_var = tk.StringVar(value=_pick_and_remember(phrase_items, cfg=cfg))
@@ -493,7 +492,7 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
                                     text=current_phrase_var.get(),
                                     font=phrase_font, fill=text_colors["primary"],
                                     width=content_w)
-    counter_var = tk.StringVar(value=f"[ROUND] 0 / {required} COMPLETED")
+    counter_var = tk.StringVar(value=round_text(0))
     counter_id = content.create_text(pad_x, 157, anchor="nw", text=counter_var.get(),
                                      font=small_font, fill=text_colors["secondary"],
                                      width=content_w)
@@ -560,7 +559,7 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
 
     error_label = CanvasTextProxy(content, error_id)
 
-    submit_btn = tk.Button(root, text="[ EXECUTE UNLOCK ]",
+    submit_btn = tk.Button(root, text=ui_text(cfg, "button", "[ EXECUTE UNLOCK ]"),
                            font=(font_family, max(9, int(10 * ui_scale)), "bold"),
                            bg=tech_red, fg="white", activebackground=accent,
                            activeforeground="white", relief="flat", bd=0,
@@ -581,7 +580,7 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
         submit_btn.config(state="disabled")
         remaining = {"n": min_delay}
         wait_id = content.create_text(pad_x, 316, anchor="nw",
-                                      text=f"Please wait {remaining['n']}s...",
+                                      text=ui_text(cfg, "wait", "Please wait {n}s...", n=remaining["n"]),
                                       font=small_font, fill=text_colors["secondary"],
                                       width=content_w)
         wait_label = CanvasTextProxy(content, wait_id)
@@ -593,7 +592,7 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
                 submit_btn.config(state="normal")
                 wait_label.config(text="")
             else:
-                wait_label.config(text=f"Please wait {remaining['n']}s...")
+                wait_label.config(text=ui_text(cfg, "wait", "Please wait {n}s...", n=remaining["n"]))
                 root.after(1000, tick)
         root.after(1000, tick)
 
@@ -734,7 +733,7 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
             if state["completed"] >= required:
                 finish_success()
                 return
-            counter_var.set(f"[ROUND] {state['completed']} / {required} COMPLETED")
+            counter_var.set(round_text(state["completed"]))
             current_phrase_var.set(_pick_and_remember(phrase_items, previous=current_phrase_var.get(), cfg=cfg))
         else:
             state["had_error"] = True
@@ -747,8 +746,8 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
                     log("Error audio playback failed:\n" + traceback.format_exc())
             if reset_on_error or strict_mode:
                 state["completed"] = 0
-                counter_var.set(f"[ROUND] 0 / {required} COMPLETED")
-            error_label.config(text="ACCESS DENIED // INPUT MISMATCH")
+                counter_var.set(round_text(0))
+            error_label.config(text=error_text(cfg, "ACCESS DENIED // INPUT MISMATCH"))
             if glitch_effect:
                 original = error_label.cget("text")
 
@@ -770,7 +769,7 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
                 glitch_step()
             entry_var.set("")
             if max_attempts and state["attempts"] >= max_attempts:
-                error_label.config(text=f"LOCKOUT // RETRY IN {lockout_seconds}s")
+                error_label.config(text=ui_text(cfg, "lockout", "LOCKOUT // RETRY IN {n}s", n=lockout_seconds))
                 submit_btn.config(state="disabled")
                 state["can_submit"] = False
                 state["attempts"] = 0
@@ -782,7 +781,7 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
                         error_label.config(text="")
                         entry.focus_force()
                         return
-                    error_label.config(text=f"LOCKOUT // RETRY IN {n}s")
+                    error_label.config(text=ui_text(cfg, "lockout", "LOCKOUT // RETRY IN {n}s", n=n))
                     root.after(1000, lambda: unlock_after_lockout(n - 1))
 
                 root.after(1000, unlock_after_lockout)

@@ -82,6 +82,7 @@ DEFAULT_CONFIG = {
     "manual_lock_hotkey": "",
     "pause_hotkey": "",          # e.g. "Ctrl+Alt+P": pause PhraseLock / resume, without the challenge ("" = off)
     "pause_minutes": 15,         # how long the hotkey pauses for
+    "ui_texts": {},              # lock-screen wording set by a theme pack (see themes.py); {} = built-in texts
 }
 
 

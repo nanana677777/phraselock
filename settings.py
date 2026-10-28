@@ -20,6 +20,8 @@ import phrase_lock
 import monitors
 import media
 import hotkeys
+import packs
+import themes
 
 CONFIG_DIR = phrase_lock.CONFIG_DIR
 CONFIG_PATH = phrase_lock.CONFIG_PATH
@@ -373,10 +375,44 @@ def main():
     # ======================================================================
     t_look = new_tab("look", "  Look  ")
 
+    heading(t_look, "[00] THEME PACK")
+    note(t_look, "A pack sets phrases, theme, background images, sounds, interface texts and challenge rules "
+                 "in one click. It never changes your emergency password or your schedule, and the last "
+                 "pack can be undone.")
+    available_packs = packs.list_packs()
+    pack_choice_var = tk.StringVar(value=available_packs[0]["name"] if available_packs else "(no pack found)")
+    pack_desc_var = tk.StringVar()
+    pack_protect_var = tk.BooleanVar(value=False)
+
+    def refresh_pack_description(*_):
+        for p in available_packs:
+            if p["name"] == pack_choice_var.get():
+                pack_desc_var.set(p["description"])
+                return
+        pack_desc_var.set("")
+
+    if available_packs:
+        pad(tk.OptionMenu(t_look, pack_choice_var, *[p["name"] for p in available_packs]), pady=(0, 4))
+        pack_choice_var.trace_add("write", refresh_pack_description)
+        refresh_pack_description()
+        pad(tk.Label(t_look, textvariable=pack_desc_var, font=("Consolas", 9), fg=MUTED,
+                     wraplength=620, justify="left"), pady=(0, 6))
+        pad(tk.Checkbutton(t_look, text="Also enable the pack's protections (strict mode, idle lock...) "
+                                        "- needs an emergency password", variable=pack_protect_var), pady=(0, 6))
+        pack_btns = tk.Frame(t_look)
+        pack_btns.pack(anchor="w", padx=20, pady=(0, 6))
+        tk.Button(pack_btns, text="Apply pack...", command=lambda: on_apply_pack()).pack(side="left")
+        tk.Button(pack_btns, text="Undo last pack", command=lambda: on_undo_pack()).pack(side="left", padx=(8, 0))
+        tk.Button(pack_btns, text="Open pack folder", command=lambda: on_open_pack_folder()).pack(side="left", padx=(8, 0))
+        note(t_look, "Your own images, GIFs and sounds go in the pack folder (backgrounds\\ and audio\\). "
+                     "Apply the pack again after adding images.", size=8)
+    else:
+        note(t_look, "No theme pack was found next to PhraseLock.")
+
     heading(t_look, "[01] THEME / HUD")
     theme_var = tk.StringVar(value=str(cfg.get("theme", "Cyber Red")))
     pad(tk.Label(t_look, text="Theme:"), pady=(0, 3))
-    pad(tk.OptionMenu(t_look, theme_var, "Cyber Red", "Neon Pink", "Cyber Blue", "Matrix", "Dark Purple", "Blackout"), pady=(0, 8))
+    pad(tk.OptionMenu(t_look, theme_var, *themes.theme_names()), pady=(0, 8))
     font_var = tk.StringVar(value=str(cfg.get("font_family", "Consolas")))
     pad(tk.Label(t_look, text="Interface font:"), pady=(0, 3))
     pad(tk.OptionMenu(t_look, font_var, "Consolas", "Bahnschrift", "Segoe UI", "Courier New"), pady=(0, 8))
@@ -1095,6 +1131,98 @@ def main():
                                   "for example Ctrl+Alt+P.")
         return None
 
+    # ------------------------------------------------------------ theme packs
+    pack_busy = {"on": False}   # True once a pack change is saved: autosave must not overwrite it
+
+    def selected_pack():
+        for p in available_packs:
+            if p["name"] == pack_choice_var.get():
+                return p
+        return None
+
+    def current_settings():
+        """What the window shows right now merged into the saved config, or None (after telling the user)."""
+        problem = validation_problem()
+        if problem:
+            key, message = problem
+            notebook.select(tab_by_key[key])
+            messagebox.showerror("Theme pack", message, parent=root)
+            return None
+        return {**cfg, **collect_cfg()}
+
+    def on_apply_pack():
+        pack = selected_pack()
+        if not pack:
+            return
+        current = current_settings()
+        if current is None:
+            return
+        want_protections = pack_protect_var.get()
+        if want_protections and not current.get("emergency_password_hash"):
+            notebook.select(tab_by_key["protection"])
+            messagebox.showerror(
+                "Theme pack",
+                "Set an emergency password first (Protection tab, then Save), so you can always get back "
+                "in before turning the pack's protections on.", parent=root)
+            return
+        protections_note = ""
+        if want_protections:
+            protections_note = ("\n\nThe pack's protections will also be switched on (strict mode, "
+                                "idle lock). Keep your emergency password at hand.")
+        if not messagebox.askyesno(
+                "Apply theme pack",
+                f"Apply the '{pack['name']}' pack?\n\n"
+                "This replaces your phrase file, theme and colours, background images, sounds, interface "
+                "texts and challenge rules (rounds, paste, delay, attempts).\n\n"
+                "Your emergency password and schedule are not touched, and you can undo it afterwards."
+                + protections_note,
+                parent=root):
+            return
+        pack_busy["on"] = True
+        try:
+            new_cfg, warnings = packs.apply_pack(current, pack["id"], include_protections=want_protections)
+            save_config(new_cfg)
+        except (packs.PackError, OSError) as exc:
+            pack_busy["on"] = False
+            messagebox.showerror("Theme pack", str(exc), parent=root)
+            return
+        text = f"'{pack['name']}' applied. Settings will close now; open them again to see the new values."
+        if warnings:
+            text += "\n\nNotes:\n- " + "\n- ".join(warnings)
+        messagebox.showinfo("Theme pack", text, parent=root)
+        root.destroy()
+
+    def on_undo_pack():
+        name = packs.last_applied_pack()
+        if not name:
+            messagebox.showinfo("Theme pack", "There is no pack to undo.", parent=root)
+            return
+        current = current_settings()
+        if current is None:
+            return
+        if not messagebox.askyesno(
+                "Undo theme pack",
+                f"Put back the settings you had before the '{name}' pack?", parent=root):
+            return
+        pack_busy["on"] = True
+        try:
+            save_config(packs.undo_last_pack(current))
+        except (packs.PackError, OSError) as exc:
+            pack_busy["on"] = False
+            messagebox.showerror("Theme pack", str(exc), parent=root)
+            return
+        messagebox.showinfo("Theme pack", "Previous settings restored. Settings will close now.", parent=root)
+        root.destroy()
+
+    def on_open_pack_folder():
+        pack = selected_pack()
+        if not pack:
+            return
+        try:
+            os.startfile(packs.install_pack_assets(pack["id"]))
+        except (packs.PackError, OSError, AttributeError) as exc:
+            messagebox.showerror("Theme pack", f"Could not open the pack folder:\n{exc}", parent=root)
+
     saved_msg_var = tk.StringVar()
     saved_clear = {"job": None}
 
@@ -1187,6 +1315,8 @@ def main():
     def do_autosave():
         nonlocal cfg
         autosave["job"] = None
+        if pack_busy["on"]:
+            return
         try:
             # Half-typed or invalid values (bad colour, bad HH:MM) are skipped
             # silently; they get saved as soon as they become valid.

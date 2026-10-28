@@ -1,0 +1,55 @@
+{
+  "name": "TechDom",
+  "version": 1,
+  "description": "Vex, a calm systems administrator who treats you as a misconfigured device: cyan terminal look, access-control wording, rules to match.",
+  "persona": {
+    "name": "Vex",
+    "role": "Systems administrator",
+    "personality": "Calm, precise and dry-witted. Never raises her voice. Treats the user as a misconfigured device she is patiently bringing into compliance. Praise is rare and deadpan; every mistake is simply logged."
+  },
+  "config": {
+    "title": "Access control: Vex",
+    "theme": "TechDom",
+    "font_family": "Consolas",
+    "panel_color": "#0b0f14",
+    "panel_opacity": 92,
+    "scanlines": true,
+    "glow_effect": true,
+    "glitch_effect": true,
+    "background_mode": "fill",
+    "phrases_file": "phrases.csv",
+    "difficulty": "all",
+    "difficulty_weighting": true,
+    "play_sound": true,
+    "sound_on_error": true,
+    "success_sound": "audio/success.wav",
+    "error_sound": "audio/error.wav",
+    "sound_volume": 70,
+    "required_repeats": 2,
+    "reset_on_error": true,
+    "disable_paste": true,
+    "case_insensitive": false,
+    "min_delay_seconds": 3,
+    "max_attempts": 5,
+    "lockout_seconds": 30
+  },
+  "ui_texts": {
+    "header": "// VEX :: ACCESS CONTROL",
+    "subtitle": "USER AUTHENTICATION  /  COMPLIANCE REQUIRED",
+    "button": "[ SUBMIT FOR REVIEW ]",
+    "round": "[COMPLIANCE] {done} / {total} CONFIRMED",
+    "wait": "Policy review in progress: {n}s...",
+    "lockout": "ACCOUNT LOCKED // RETRY IN {n}s",
+    "errors": [
+      "ERROR LOGGED // NOT THE INSTRUCTION",
+      "REJECTED // TYPE IT AGAIN",
+      "DEVIATION RECORDED // RETRY",
+      "VEX IS NOT IMPRESSED // RETRY"
+    ]
+  },
+  "protections": {
+    "strict_mode": true,
+    "idle_lock_enabled": true,
+    "idle_lock_minutes": 20
+  }
+}
