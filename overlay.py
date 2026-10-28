@@ -24,9 +24,10 @@ import gifbg
 from themes import theme_colors, ui_text, error_text
 from stats import (
     get_progress, get_streak, get_xp_level,
-    record_stat, update_streak, add_progress, verify_emergency_password,
+    record_stat, update_streak, add_progress, verify_emergency_password, apply_emergency_penalty,
 )
 
+from emergency import steps as emergency_steps, apply_penalty, CONFIRM_DELAY_SECONDS
 from phrases import pick_phrase, remember_last_phrase, get_last_phrase
 from monitors import (
     resolve_lock_monitors, choices_from_cfg, monitors_signature, list_monitors,
@@ -624,6 +625,8 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
             if not emergency:
                 update_streak(first_try)
                 add_progress(50 if first_try else 20, successful=True)
+            else:
+                apply_penalty(cfg, apply_emergency_penalty)
         root.grab_release()
         wait_ms = _audio_duration_ms(success_sound) if play_sound else 0
         if wait_ms:
@@ -660,18 +663,19 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
         dialog.lift()
         dialog.focus_force()
         dialog.configure(bg="#10101a")
-        tk.Label(dialog, text="// EMERGENCY OVERRIDE", font=("Consolas", 13, "bold"),
+        tk.Label(dialog, text=ui_text(cfg, "emergency_title", "// EMERGENCY OVERRIDE"), font=("Consolas", 13, "bold"),
                  fg=accent, bg="#10101a").pack(padx=24, pady=(22, 4))
-        tk.Label(dialog, text="AUTHORIZATION KEY REQUIRED.", font=("Consolas", 10),
-                 fg="#aaa6bd", bg="#10101a").pack(padx=20, pady=(0, 12))
+        sub = tk.Label(dialog, text=ui_text(cfg, "emergency_prompt", "AUTHORIZATION KEY REQUIRED."), font=("Consolas", 10),
+                       fg="#aaa6bd", bg="#10101a", wraplength=380, justify="center")
+        sub.pack(padx=20, pady=(0, 12))
+        body = tk.Frame(dialog, bg="#10101a")
+        body.pack(fill="x")
         pw_var = tk.StringVar()
-        pw = tk.Entry(dialog, textvariable=pw_var, show="*", width=32,
+        pw = tk.Entry(body, textvariable=pw_var, show="*", width=32,
                       bg="#181824", fg="white", insertbackground="white",
                       relief="flat", bd=0, highlightthickness=2,
                       highlightcolor=accent, highlightbackground="#2d2b3c")
-        pw.pack(padx=20, pady=5)
-        msg = tk.Label(dialog, text="", fg="#ff6b8a", bg="#10101a")
-        msg.pack(padx=20, pady=(0, 5))
+        msg = tk.Label(body, text="", fg="#ff6b8a", bg="#10101a")
 
         def close_emergency():
             nonlocal emergency_dialog
@@ -699,20 +703,67 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
                 state["emergency_used"] = True
                 finish_success(emergency=True)
             else:
-                msg.config(text="Incorrect emergency password.")
+                msg.config(text=ui_text(cfg, "emergency_wrong", "Incorrect emergency password."))
                 pw_var.set("")
                 pw.focus_force()
 
-        tk.Button(dialog, text="[ OVERRIDE ]", command=submit_emergency, width=15,
-                  font=("Consolas", 10, "bold"), bg=tech_red, fg="white",
-                  activebackground=accent, activeforeground="white",
-                  relief="flat", bd=0, padx=12, pady=7,
-                  cursor="hand2").pack(pady=(6, 20))
-        pw.bind("<Return>", submit_emergency)
-        pw.focus_force()
+        def show_password():
+            for child in body.winfo_children():
+                if child not in (pw, msg):
+                    child.destroy()
+            sub.config(text=ui_text(cfg, "emergency_prompt", "AUTHORIZATION KEY REQUIRED."))
+            pw.pack(padx=20, pady=5)
+            msg.pack(padx=20, pady=(0, 5))
+            tk.Button(body, text=ui_text(cfg, "emergency_submit", "[ OVERRIDE ]"), command=submit_emergency, width=15,
+                      font=("Consolas", 10, "bold"), bg=tech_red, fg="white",
+                      activebackground=accent, activeforeground="white",
+                      relief="flat", bd=0, padx=12, pady=7,
+                      cursor="hand2").pack(pady=(6, 20))
+            pw.bind("<Return>", submit_emergency)
+            pw.focus_force()
+
+        confirm_steps = emergency_steps(cfg)
+
+        def show_step(index):
+            if index >= len(confirm_steps):
+                show_password()
+                return
+            title, text = confirm_steps[index]
+            for child in body.winfo_children():
+                if child not in (pw, msg):
+                    child.destroy()
+            sub.config(text=f"CONFIRMATION {index + 1} / {len(confirm_steps)}")
+            tk.Label(body, text=title, font=("Consolas", 12, "bold"), fg="white", bg="#10101a",
+                     wraplength=380, justify="center").pack(padx=20, pady=(0, 6))
+            tk.Label(body, text=text, font=("Consolas", 10), fg="#cfcbe0", bg="#10101a",
+                     wraplength=380, justify="center").pack(padx=20, pady=(0, 14))
+            row = tk.Frame(body, bg="#10101a")
+            row.pack(pady=(0, 20))
+            tk.Button(row, text=ui_text(cfg, "emergency_back", "[ I'LL TYPE THE PHRASE ]"), command=close_emergency,
+                      font=("Consolas", 10, "bold"), bg=accent, fg="white", relief="flat", bd=0,
+                      padx=12, pady=7, cursor="hand2").pack(side="left", padx=(0, 10))
+            go = tk.Button(row, text="", state="disabled", font=("Consolas", 10),
+                           bg="#2d2b3c", fg="#aaa6bd", relief="flat", bd=0, padx=12, pady=7,
+                           command=lambda: show_step(index + 1))
+            go.pack(side="left")
+
+            def countdown(left):
+                try:
+                    if not go.winfo_exists():
+                        return
+                    if left > 0:
+                        go.config(text=f"Continue ({left})")
+                        dialog.after(1000, lambda: countdown(left - 1))
+                    else:
+                        go.config(text=ui_text(cfg, "emergency_continue", "Continue anyway"), state="normal", cursor="hand2")
+                except tk.TclError:
+                    pass
+            countdown(CONFIRM_DELAY_SECONDS)
+
+        show_step(0)
 
     if emergency_available:
-        emergency_btn = tk.Button(root, text="Emergency unlock",
+        emergency_btn = tk.Button(root, text=ui_text(cfg, "emergency_open", "Emergency unlock"),
                                   font=("Consolas", 8, "bold"),
                                   command=emergency_unlock, relief="flat",
                                   bd=1, padx=10, pady=5, cursor="hand2",

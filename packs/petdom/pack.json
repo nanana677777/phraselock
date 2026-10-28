@@ -47,6 +47,35 @@
       "NOT QUITE // JUNO IS WAITING",
       "NO TREAT YET // ONE MORE TIME",
       "STAY FOCUSED // TYPE IT AGAIN"
+    ],
+    "emergency_open": "Ask Juno to let me out",
+    "emergency_title": "~ JUNO'S SPARE KEY ~",
+    "emergency_prompt": "ONLY THE HANDLER'S KEY WORKS HERE.",
+    "emergency_submit": "[ USE THE KEY ]",
+    "emergency_back": "[ I'LL BE GOOD ]",
+    "emergency_continue": "Ask anyway",
+    "emergency_wrong": "That is not Juno's key.",
+    "emergency_steps": [
+      {
+        "title": "Leaving so soon?",
+        "text": "Juno was just getting comfortable. Are you sure you cannot do the task nicely?"
+      },
+      {
+        "title": "Is it a real emergency?",
+        "text": "If it is only a case of the zoomies, Juno says sit and try again."
+      },
+      {
+        "title": "Deep breath, good pet.",
+        "text": "It takes one minute to type the phrase. Juno will be proud of you."
+      },
+      {
+        "title": "Juno will be sad.",
+        "text": "Using the spare key is written down as an emergency unlock."
+      },
+      {
+        "title": "Really, really sure?",
+        "text": "After this, only the spare key is left. No treats for skipping."
+      }
     ]
   },
   "protections": {

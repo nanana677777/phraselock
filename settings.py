@@ -20,6 +20,7 @@ from appicon import apply_window_icon
 import phrase_lock
 import monitors
 import media
+import emergency as emergency_mod
 import hotkeys
 import packs
 import themes
@@ -1040,6 +1041,21 @@ def main(start_tab=None):
     clear_pw_var = tk.BooleanVar(value=False)
     pad(Switch(t_prot, text="Remove the emergency password on Save", variable=clear_pw_var, font=(UI_FONT, 9)))
 
+    note(t_prot, "Make the emergency unlock harder to use on impulse: 'are you sure?' screens (each one has a "
+                 "short wait) before the password is asked, and an optional penalty once it is used.", size=9)
+    emergency_confirm_var = tk.StringVar(value=str(emergency_mod.count(cfg)))
+    row_confirm = tk.Frame(t_prot)
+    row_confirm.pack(anchor="w", padx=20, pady=(2, 4))
+    tk.Label(row_confirm, text="Confirmation screens:").pack(side="left", padx=(0, 10))
+    Dropdown(row_confirm, emergency_confirm_var, "0", "1", "2", "3", "4", "5").pack(side="left")
+    emergency_streak_var = tk.BooleanVar(value=bool(cfg.get("emergency_penalty_streak", False)))
+    pad(Switch(t_prot, text="Penalty: reset my streak when I use it", variable=emergency_streak_var, font=(UI_FONT, 9)))
+    emergency_xp_var = tk.StringVar(value=str(emergency_mod.penalty(cfg)["xp"]))
+    row_xp = tk.Frame(t_prot)
+    row_xp.pack(anchor="w", padx=20, pady=(0, 6))
+    tk.Label(row_xp, text="Penalty: XP lost (0-500):").pack(side="left", padx=(0, 10))
+    tk.Spinbox(row_xp, from_=0, to=500, increment=10, textvariable=emergency_xp_var, width=6).pack(side="left")
+
     heading(t_prot, "[02] WATCHDOG / AUTO-PROTECTION", DANGER)
     note(t_prot, "If enabled, a background watchdog restarts the protection monitor if it disappears. "
                  "Use with caution: disable this option before uninstalling PhraseLock.", color=WARN)
@@ -1367,6 +1383,9 @@ def main(start_tab=None):
             "show_round_counter": show_round_var.get(),
             "show_streak_line": show_streak_var.get(),
             "show_goal_line": show_goal_var.get(),
+            "emergency_confirmations": num(emergency_confirm_var, 3, 0, 5),
+            "emergency_penalty_streak": emergency_streak_var.get(),
+            "emergency_penalty_xp": num(emergency_xp_var, 0, 0, 500),
             "custom_themes": themes.clean_custom_themes(custom_state["themes"]),
             "font_family": font_var.get(),
             "ui_scale": num(ui_scale_var, 100, 75, 150),

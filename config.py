@@ -89,6 +89,9 @@ DEFAULT_CONFIG = {
     "show_round_counter": True,  # lock screen: "[COMPLIANCE] 0 / 1 CONFIRMED" style round counter
     "show_streak_line": True,    # lock screen: first-try streak line
     "show_goal_line": True,      # lock screen: daily goal, level and XP line
+    "emergency_confirmations": 3,   # emergency unlock: how many "are you sure?" screens come before the password (0 = none)
+    "emergency_penalty_streak": False,  # emergency unlock: reset the first-try streak
+    "emergency_penalty_xp": 0,          # emergency unlock: XP taken away (0 = none)
     "ui_texts": {},              # lock-screen wording set by a theme pack (see themes.py); {} = built-in texts
 }
 

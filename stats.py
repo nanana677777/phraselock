@@ -144,6 +144,29 @@ def add_progress(xp_gain=0, successful=False):
     return data
 
 
+def apply_emergency_penalty(reset_streak=False, xp_loss=0):
+    """Penalty for using the emergency password. Returns what was actually taken away.
+
+    Resets the current streak (best streak is kept) and/or removes XP (never below 0).
+    """
+    taken = {"streak": 0, "xp": 0}
+    try:
+        data = _read_streak_data()
+        if reset_streak:
+            taken["streak"] = int(data.get("current_streak", 0))
+            data["current_streak"] = 0
+            data["last_qualifying_day"] = None
+        if xp_loss:
+            have = max(0, int(data.get("xp", 0)))
+            taken["xp"] = min(have, int(xp_loss))
+            data["xp"] = have - taken["xp"]
+        if reset_streak or xp_loss:
+            save_json(STREAK_PATH, data)
+    except Exception:
+        log("Could not apply the emergency penalty:\n" + traceback.format_exc())
+    return taken
+
+
 def get_xp_level(xp):
     xp = max(0, int(xp))
     level = 1

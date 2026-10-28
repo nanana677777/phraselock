@@ -47,6 +47,35 @@
       "REJECTED // TYPE IT AGAIN",
       "DEVIATION RECORDED // RETRY",
       "VEX IS NOT IMPRESSED // RETRY"
+    ],
+    "emergency_open": "[ ADMIN OVERRIDE ]",
+    "emergency_title": "// VEX :: OVERRIDE REQUEST",
+    "emergency_prompt": "ADMIN AUTHORIZATION KEY REQUIRED.",
+    "emergency_submit": "[ AUTHORIZE ]",
+    "emergency_back": "[ RETURN TO TASK ]",
+    "emergency_continue": "Escalate anyway",
+    "emergency_wrong": "KEY REJECTED // LOGGED",
+    "emergency_steps": [
+      {
+        "title": "OVERRIDE REQUEST RECEIVED",
+        "text": "Vex notes you are trying to bypass the compliance task. This request will be logged."
+      },
+      {
+        "title": "JUSTIFICATION CHECK",
+        "text": "Genuine emergencies are rare. 'Inconvenient' is not an incident category."
+      },
+      {
+        "title": "RE-EVALUATE",
+        "text": "The task takes less time than this review. Returning to it is still an option."
+      },
+      {
+        "title": "AUDIT NOTICE",
+        "text": "The override is recorded in your stats as an emergency unlock."
+      },
+      {
+        "title": "FINAL AUTHORIZATION",
+        "text": "Once you continue, only the admin key stands between you and the bypass."
+      }
     ]
   },
   "protections": {

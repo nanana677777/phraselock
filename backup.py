@@ -60,6 +60,8 @@ INT_RANGES = {
     "focus_session_minutes": (1, 240),
     "idle_lock_minutes": (1, 240),
     "xp": (0, 10 ** 12),
+    "emergency_confirmations": (0, 5),
+    "emergency_penalty_xp": (0, 500),
     "emergency_password_iterations": (1, 10_000_000),
 }
 

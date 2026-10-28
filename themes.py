@@ -128,7 +128,12 @@ def copy_name(base, taken):
 # Every text the lock screen (and the Settings window title) shows that a theme pack may replace. A pack stores
 # its own versions in the ``ui_texts`` setting; anything it leaves out keeps the
 # default given at the call site in overlay.py.
-UI_TEXT_KEYS = ("app_kicker", "app_title", "header", "subtitle", "button", "errors", "lockout", "wait", "round")
+UI_TEXT_KEYS = ("app_kicker", "app_title", "header", "subtitle", "button", "errors", "lockout", "wait", "round",
+                "emergency_open", "emergency_title", "emergency_prompt", "emergency_submit", "emergency_back",
+                "emergency_continue", "emergency_wrong", "emergency_steps")
+MAX_STEP_TITLE_LENGTH = 60
+MAX_STEP_TEXT_LENGTH = 240
+MAX_EMERGENCY_STEPS = 5
 MAX_UI_TEXT_LENGTH = 80
 
 
@@ -175,7 +180,19 @@ def clean_ui_texts(raw):
         return clean
     for key in UI_TEXT_KEYS:
         value = raw.get(key)
-        if key == "errors":
+        if key == "emergency_steps":
+            steps = []
+            if isinstance(value, list):
+                for item in value[:MAX_EMERGENCY_STEPS]:
+                    if not isinstance(item, dict):
+                        continue
+                    title, text = item.get("title"), item.get("text")
+                    if (isinstance(title, str) and title.strip() and len(title) <= MAX_STEP_TITLE_LENGTH
+                            and isinstance(text, str) and text.strip() and len(text) <= MAX_STEP_TEXT_LENGTH):
+                        steps.append({"title": title.strip(), "text": text.strip()})
+            if steps:
+                clean[key] = steps
+        elif key == "errors":
             if isinstance(value, list):
                 items = [x.strip() for x in value
                          if isinstance(x, str) and x.strip() and len(x) <= MAX_UI_TEXT_LENGTH]
