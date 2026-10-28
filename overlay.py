@@ -320,7 +320,7 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
     progress_data = get_progress()
     level, level_xp, level_need = get_xp_level(progress_data.get("xp", 0))
 
-    theme_red, theme_cyan, theme_purple = theme_colors(theme)
+    theme_red, theme_cyan, theme_purple = theme_colors(theme, cfg)
 
     def round_text(done):
         return ui_text(cfg, "round", "[ROUND] {done} / {total} COMPLETED", done=done, total=required)

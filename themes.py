@@ -6,6 +6,7 @@ keeping its own copy of the colour table.
 """
 
 import random
+import re
 
 DEFAULT_THEME = "Cyber Red"
 
@@ -19,20 +20,105 @@ THEMES = {
     "Blackout": ("#eeeeee", "#777777", "#444444"),
     # Theme pack colours (see packs/<name>/pack.json).
     "TechDom": ("#0097a7", "#00e5ff", "#39ff88"),
+    "PetDom": ("#ff8a3d", "#ffd54f", "#ff6f91"),
 }
 
 
-def theme_names():
-    return list(THEMES)
+# --------------------------------------------------------------------------
+# custom themes (made in Settings > Look > Theme editor)
+# --------------------------------------------------------------------------
+
+MAX_THEME_NAME_LENGTH = 30
+MAX_CUSTOM_THEMES = 30
+_HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
-def theme_colors(name):
+def is_hex_colour(value):
+    return isinstance(value, str) and bool(_HEX_RE.match(value.strip()))
+
+
+def clean_custom_themes(raw):
+    """Validated copy of the ``custom_themes`` setting: {name: [primary, secondary, third]}.
+
+    Entries with an empty or over-long name, a name that is already a built-in theme
+    (case-insensitive), or anything other than three #rrggbb colours are dropped.
+    """
+    clean = {}
+    if not isinstance(raw, dict):
+        return clean
+    builtin = {n.lower() for n in THEMES}
+    for name, colours in raw.items():
+        if not isinstance(name, str):
+            continue
+        name = name.strip()
+        if not name or len(name) > MAX_THEME_NAME_LENGTH or name.lower() in builtin:
+            continue
+        if any(name.lower() == k.lower() for k in clean):
+            continue
+        if not isinstance(colours, (list, tuple)) or len(colours) != 3:
+            continue
+        if not all(is_hex_colour(c) for c in colours):
+            continue
+        clean[name] = [c.strip().lower() for c in colours]
+        if len(clean) >= MAX_CUSTOM_THEMES:
+            break
+    return clean
+
+
+def custom_themes(cfg):
+    return clean_custom_themes(cfg.get("custom_themes")) if isinstance(cfg, dict) else {}
+
+
+def is_builtin(name):
+    return name in THEMES
+
+
+def theme_names(cfg=None):
+    """Built-in themes first, then the custom ones (sorted)."""
+    return list(THEMES) + sorted(custom_themes(cfg), key=str.lower)
+
+
+def theme_colors(name, cfg=None):
     """(primary, secondary, third) for *name*; unknown names fall back to the default."""
-    return THEMES.get(name, THEMES[DEFAULT_THEME])
+    if name in THEMES:
+        return THEMES[name]
+    custom = custom_themes(cfg)
+    if name in custom:
+        return tuple(custom[name])
+    return THEMES[DEFAULT_THEME]
 
 
-def accent_for(name):
-    return theme_colors(name)[0]
+def accent_for(name, cfg=None):
+    return theme_colors(name, cfg)[0]
+
+
+def check_theme_name(name, taken, allow=None):
+    """Return an error message for a bad new theme name, or None when it is fine.
+
+    *taken* are the names already in use; *allow* is one name that may be reused
+    (the theme being renamed, so that only changing the case is accepted).
+    """
+    name = (name or "").strip()
+    if not name:
+        return "Give the theme a name."
+    if len(name) > MAX_THEME_NAME_LENGTH:
+        return f"Use at most {MAX_THEME_NAME_LENGTH} characters."
+    for other in taken:
+        if other.lower() == name.lower() and other != allow:
+            return "A theme with that name already exists."
+    return None
+
+
+def copy_name(base, taken):
+    """'Matrix' -> 'Matrix copy', then 'Matrix copy 2', ... (never in *taken*, never too long)."""
+    lowered = {t.lower() for t in taken}
+    stem = base[: MAX_THEME_NAME_LENGTH - 8].rstrip()
+    candidate = f"{stem} copy"
+    n = 2
+    while candidate.lower() in lowered:
+        candidate = f"{stem} copy {n}"
+        n += 1
+    return candidate
 
 
 # --------------------------------------------------------------------------

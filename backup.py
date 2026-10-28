@@ -32,7 +32,7 @@ from datetime import date, datetime
 from typing import List, Optional
 
 from config import CONFIG_PATH, STATS_PATH, STREAK_PATH, DEFAULT_CONFIG, save_json, log
-from themes import clean_ui_texts
+from themes import clean_ui_texts, clean_custom_themes
 
 BACKUP_FORMAT = "phraselock-backup"
 BACKUP_VERSION = 1
@@ -224,6 +224,11 @@ def sanitize_config(raw):
                 reject()
                 continue
             value = clean_ui_texts(value)
+        if key == "custom_themes":     # themes made in the theme editor
+            if not isinstance(value, dict):
+                reject()
+                continue
+            value = clean_custom_themes(value)
         if key == "background_images" and value is not None:
             if not isinstance(value, list) or not all(isinstance(x, str) for x in value):
                 reject("expected a list of text")

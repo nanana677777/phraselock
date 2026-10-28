@@ -53,16 +53,19 @@ class PackTestCase(unittest.TestCase):
 
 
 class ShippedTechDomTests(unittest.TestCase):
-    """The pack that ships in the repository must be valid and safe."""
+    """The packs that ship in the repository must be valid and safe."""
+
+    PACK_ID = "techdom"
+    PACK_NAME = "TechDom"
 
     def setUp(self):
-        self.pack = packs.load_pack("techdom", REPO_PACKS)
+        self.pack = packs.load_pack(self.PACK_ID, REPO_PACKS)
 
     def test_it_is_listed(self):
         found = {p["id"]: p for p in packs.list_packs(REPO_PACKS)}
-        self.assertIn("techdom", found)
-        self.assertEqual(found["techdom"]["name"], "TechDom")
-        self.assertTrue(found["techdom"]["description"])
+        self.assertIn(self.PACK_ID, found)
+        self.assertEqual(found[self.PACK_ID]["name"], self.PACK_NAME)
+        self.assertTrue(found[self.PACK_ID]["description"])
 
     def test_every_setting_is_allowed_and_well_typed(self):
         warnings = []
@@ -78,14 +81,14 @@ class ShippedTechDomTests(unittest.TestCase):
 
     def test_theme_exists_and_files_are_there(self):
         self.assertIn(self.pack["config"]["theme"], themes.THEMES)
-        folder = os.path.join(REPO_PACKS, "techdom")
+        folder = os.path.join(REPO_PACKS, self.PACK_ID)
         for key in packs.PACK_FILE_KEYS:
             rel = self.pack["config"].get(key)
             if rel:
                 self.assertTrue(os.path.isfile(os.path.join(folder, rel)), rel)
 
     def test_phrases_load_with_every_difficulty(self):
-        items = phrases.load_external_phrases(os.path.join(REPO_PACKS, "techdom", "phrases.csv"))
+        items = phrases.load_external_phrases(os.path.join(REPO_PACKS, self.PACK_ID, "phrases.csv"))
         self.assertGreaterEqual(len(items), 20)
         self.assertEqual({i["difficulty"] for i in items}, {"easy", "normal", "hard", "extreme"})
         texts = [i["text"] for i in items]
@@ -101,7 +104,7 @@ class ShippedTechDomTests(unittest.TestCase):
         self.assertIn(themes.error_text(cfg, "default"), clean["errors"])
 
     def test_it_ships_default_backgrounds_and_sounds(self):
-        folder = os.path.join(REPO_PACKS, "techdom")
+        folder = os.path.join(REPO_PACKS, self.PACK_ID)
         images = [n for n in os.listdir(os.path.join(folder, "backgrounds"))
                   if n.lower().endswith(packs.IMAGE_EXTS)]
         self.assertGreaterEqual(len(images), 3)
@@ -118,7 +121,7 @@ class ShippedTechDomTests(unittest.TestCase):
     def test_applying_it_uses_the_shipped_backgrounds_without_warnings(self):
         with tempfile.TemporaryDirectory() as tmp:
             new, warnings = packs.apply_pack(
-                dict(DEFAULT_CONFIG), "techdom", source_root=REPO_PACKS,
+                dict(DEFAULT_CONFIG), self.PACK_ID, source_root=REPO_PACKS,
                 dest_root=os.path.join(tmp, "user"), undo_path=os.path.join(tmp, "undo.json"))
             self.assertEqual(warnings, [])
             self.assertGreaterEqual(len(new["background_images"]), 3)
@@ -133,6 +136,11 @@ class ShippedTechDomTests(unittest.TestCase):
                 self.assertNotIn(key, PASSWORD_KEYS)
                 self.assertNotIn(key, ("auto_protection", "enabled", "schedule_enabled"))
 
+
+
+class ShippedPetDomTests(ShippedTechDomTests):
+    PACK_ID = "petdom"
+    PACK_NAME = "PetDom"
 
 class ThemeTests(unittest.TestCase):
     def test_existing_themes_keep_their_accent(self):

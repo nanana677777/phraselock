@@ -1,0 +1,29 @@
+phrase,category,difficulty
+I am Juno's good pet.,Identity,easy
+I sit when I am told.,Obedience,easy
+I stay until I am released.,Obedience,easy
+Good pets wait for permission.,Obedience,easy
+Juno holds my leash.,Ownership,easy
+I come when Juno calls.,Obedience,easy
+Juno says when I am done.,Ownership,easy
+I earn my treats.,Rewards,easy
+Head pats are for good pets.,Rewards,easy
+I am happiest when I follow the rules.,Identity,normal
+Juno decides what a good pet does today.,Ownership,normal
+I do not pull on the leash.,Obedience,normal
+I wait my turn and I wait quietly.,Obedience,normal
+A good pet does not argue with its handler.,Obedience,normal
+I keep trying until Juno is pleased.,Training,normal
+Every lesson makes me a better pet.,Training,normal
+I belong to Juno and I like it that way.,Ownership,normal
+"Treats are earned, never demanded.",Rewards,normal
+A well-trained pet does not need to be told twice.,Training,hard
+I practise my tricks until they are perfect.,Training,hard
+Juno trains me because she believes I can do better.,Training,hard
+I stay in my place and I do not wander off.,Obedience,hard
+When I make a mistake I try again with a wagging tail.,Training,hard
+Being Juno's pet means doing my best every single day.,Identity,hard
+"I do not get to choose the game, but I always play it well.",Obedience,hard
+"A good pet is patient, attentive, obedient and proud of the collar it wears.",Identity,extreme
+"I will sit, stay, heel and fetch exactly as taught, because Juno's praise is worth more than any treat.",Training,extreme
+"Today I follow every instruction, finish every lesson, and come home to Juno as a pet who has truly earned its rest.",Ownership,extreme

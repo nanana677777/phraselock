@@ -8,6 +8,10 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **First-launch setup wizard.** The first time PhraseLock is opened (no config file yet) a five-step wizard asks for a style (theme pack or default look), a difficulty, how strict to be (keep the style's rules, gentle, standard or strict), an optional emergency password (and, with it, the style's protections) and whether to start protecting right away. Your answers win over the pack's defaults. It can be skipped, and run again from *Settings > Home*. New modules/settings: `wizard.py`, `setup_done`, `advanced_view`.
+- **Simple Home tab.** Settings now opens on a **Home** tab with the essentials (style, difficulty, emergency password). Users who went through the wizard see only that tab until they tick *Show advanced settings*, which brings back Phrases, Look, Rules, Protection and Stats. Existing installs keep every tab.
+- **Theme editor.** *Settings > Look > Theme editor* lets you create, rename, duplicate and delete your own colour themes (main, secondary and third accent, with a colour picker). They show up in the Theme list and are used by the lock screen and the focus-session window. Built-in themes are read-only but can be duplicated; deleting the theme in use falls back to Cyber Red. New setting `custom_themes`, validated on backup import.
+- **PetDom theme pack.** Juno, a warm but firm handler: amber `PetDom` theme, 28 friendly "good pet" phrases, lock-screen wording, three original backgrounds (paw trail, bokeh, toys), generated chirp/boop sounds and gentler rules (a typo does not reset progress, 20 s time out). Protections stay opt-in.
 - **Theme packs, first pack: TechDom.** *Settings > Look > Theme pack* applies a whole preset in
   one click: a phrase file, theme and colours, background images and GIFs, success/error sounds,
   lock-screen wording and challenge rules (rounds, paste, delay, attempts, lockout). TechDom is a

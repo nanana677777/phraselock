@@ -31,6 +31,8 @@ def self_command(*args):
 
 DEFAULT_CONFIG = {
     "enabled": True,
+    "setup_done": False,         # the first-launch wizard has run (or was skipped)
+    "advanced_view": True,       # Settings: show every tab; the wizard switches it off for new users
     "phrases": ["My name is XXX, I wish to access my PC"],
     "phrases_file": "",
     "title": "Conditional unlock",
@@ -65,6 +67,7 @@ DEFAULT_CONFIG = {
     "lockout_seconds": 15,
     "strict_mode": False,
     "theme": "Cyber Red",
+    "custom_themes": {},         # your own themes: {"name": ["#primary", "#secondary", "#third"]} (Settings > Look > Theme editor)
     "font_family": "Consolas",
     "ui_scale": 100,
     "scanlines": True,

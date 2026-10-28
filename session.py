@@ -85,7 +85,7 @@ def show_focus_session(cfg):
     root.title("PhraseLock // FOCUS SESSION")
     root.geometry("460x230+40+40")
     root.configure(bg="#07070b")
-    accent = accent_for(cfg.get("theme", "Cyber Red"))
+    accent = accent_for(cfg.get("theme", "Cyber Red"), cfg)
     tk.Label(root, text="// FOCUS SESSION", font=("Consolas", 12, "bold"),
              fg=accent, bg="#07070b").pack(anchor="w", padx=20, pady=(18, 3))
     tk.Label(root, text="DISCIPLINE WINDOW ACTIVE", font=("Consolas", 9),

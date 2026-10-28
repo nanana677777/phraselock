@@ -1,0 +1,55 @@
+{
+  "name": "PetDom",
+  "version": 1,
+  "description": "Juno, a warm but firm handler who treats you like her well-trained pet: cosy amber look, 'good pet' wording, gentle rules.",
+  "persona": {
+    "name": "Juno",
+    "role": "Handler",
+    "personality": "Warm, playful and quietly firm. Talks to you like a pet she is very fond of and fully expects to behave. Praise is generous and comes with a head pat; mistakes get a patient 'try again, good pet', never anger."
+  },
+  "config": {
+    "title": "Training session: Juno",
+    "theme": "PetDom",
+    "font_family": "Segoe UI",
+    "panel_color": "#1a1210",
+    "panel_opacity": 90,
+    "scanlines": false,
+    "glow_effect": true,
+    "glitch_effect": false,
+    "background_mode": "fill",
+    "phrases_file": "phrases.csv",
+    "difficulty": "all",
+    "difficulty_weighting": true,
+    "play_sound": true,
+    "sound_on_error": true,
+    "success_sound": "audio/success.wav",
+    "error_sound": "audio/error.wav",
+    "sound_volume": 70,
+    "required_repeats": 2,
+    "reset_on_error": false,
+    "disable_paste": true,
+    "case_insensitive": true,
+    "min_delay_seconds": 2,
+    "max_attempts": 6,
+    "lockout_seconds": 20
+  },
+  "ui_texts": {
+    "header": "~ JUNO'S TRAINING SESSION ~",
+    "subtitle": "SIT. STAY. TYPE IT NICELY.",
+    "button": "[ GOOD PET ]",
+    "round": "[TRICKS] {done} / {total} DONE",
+    "wait": "Stay... stay... {n}s",
+    "lockout": "TIME OUT // BACK IN {n}s",
+    "errors": [
+      "OOPS // TRY AGAIN, GOOD PET",
+      "NOT QUITE // JUNO IS WAITING",
+      "NO TREAT YET // ONE MORE TIME",
+      "STAY FOCUSED // TYPE IT AGAIN"
+    ]
+  },
+  "protections": {
+    "strict_mode": true,
+    "idle_lock_enabled": true,
+    "idle_lock_minutes": 30
+  }
+}

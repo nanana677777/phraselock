@@ -1,7 +1,8 @@
 """
 PhraseLock - Settings panel (tabbed).
 
-Tabs: Phrases, Look, Rules, Protection, Stats.
+Tabs: Home (the essentials), then Phrases, Look, Rules, Protection and Stats
+(the last five are behind "Show advanced settings" for new users).
 The Save / Preview / LOCK NOW bar is always visible at the bottom.
 """
 
@@ -22,6 +23,7 @@ import media
 import hotkeys
 import packs
 import themes
+import wizard
 
 CONFIG_DIR = phrase_lock.CONFIG_DIR
 CONFIG_PATH = phrase_lock.CONFIG_PATH
@@ -161,8 +163,12 @@ def ensure_phrase_lock_monitor():
 # --------------------------------------------------------------------------
 # UI
 # --------------------------------------------------------------------------
-def main():
+def main(start_tab=None):
     cfg = load_config()
+    if wizard.should_run(cfg):
+        cfg = wizard.run(cfg)        # first launch: guided setup, saves the config itself
+        cfg = load_config()
+    reopen = {"tab": None, "wizard": False}   # set when the window should come straight back
     if cfg.get("enabled", True):
         try:
             ensure_phrase_lock_monitor()
@@ -411,8 +417,178 @@ def main():
 
     heading(t_look, "[01] THEME / HUD")
     theme_var = tk.StringVar(value=str(cfg.get("theme", "Cyber Red")))
+    custom_state = {"themes": themes.custom_themes(cfg)}      # name -> [primary, secondary, third]
+    custom_json_var = tk.StringVar(value=json.dumps(custom_state["themes"], sort_keys=True))
     pad(tk.Label(t_look, text="Theme:"), pady=(0, 3))
-    pad(tk.OptionMenu(t_look, theme_var, *themes.theme_names()), pady=(0, 8))
+    theme_menu = tk.OptionMenu(t_look, theme_var, *themes.theme_names(cfg))
+    pad(theme_menu, pady=(0, 4))
+
+    # ---- theme editor: create, rename, duplicate and delete your own themes ----
+    pad(tk.Label(t_look, text="Theme editor (your own themes):"), pady=(4, 3))
+    note(t_look, "Built-in themes cannot be edited: press Duplicate to start from their colours. "
+                 "Your themes appear in the Theme list above.", size=8)
+    colour_roles = ("Main accent", "Secondary accent", "Third accent")
+    colour_vars = [tk.StringVar(value="") for _ in colour_roles]
+    colour_entries, colour_swatches, colour_buttons = [], [], []
+    editor_loading = {"on": False}
+    editor_msg_var = tk.StringVar()
+
+    def theme_name_list():
+        return list(themes.THEMES) + sorted(custom_state["themes"], key=str.lower)
+
+    def rebuild_theme_menu():
+        menu = theme_menu["menu"]
+        menu.delete(0, "end")
+        for name in theme_name_list():
+            menu.add_command(label=name, command=lambda v=name: theme_var.set(v))
+
+    def commit_custom():
+        custom_json_var.set(json.dumps(custom_state["themes"], sort_keys=True))   # wakes the autosave
+
+    def editing_name():
+        name = theme_var.get()
+        return name if name in custom_state["themes"] else None
+
+    def refresh_editor(*_):
+        name = theme_var.get()
+        editable = name in custom_state["themes"]
+        colours = custom_state["themes"].get(name) or list(themes.theme_colors(name, {"custom_themes": custom_state["themes"]}))
+        editor_loading["on"] = True
+        try:
+            for i, var in enumerate(colour_vars):
+                var.set(colours[i])
+                try:
+                    colour_swatches[i].configure(bg=colours[i])
+                except tk.TclError:
+                    pass
+                colour_entries[i].configure(state="normal" if editable else "disabled")
+                style_entry(colour_entries[i], True)
+                colour_buttons[i].configure(state="normal" if editable else "disabled")
+        finally:
+            editor_loading["on"] = False
+        rename_btn.configure(state="normal" if editable else "disabled")
+        delete_btn.configure(state="normal" if editable else "disabled")
+        editor_msg_var.set("" if editable else "Built-in theme (read-only). Duplicate it to change the colours.")
+
+    def on_colour_edit(i):
+        if editor_loading["on"]:
+            return
+        name = editing_name()
+        if not name:
+            return
+        value = colour_vars[i].get().strip()
+        ok = themes.is_hex_colour(value)
+        style_entry(colour_entries[i], ok)
+        if not ok:
+            editor_msg_var.set("Use a colour like #00e5ff.")
+            return
+        editor_msg_var.set("")
+        value = value.lower()
+        if custom_state["themes"][name][i] != value:
+            custom_state["themes"][name][i] = value
+            try:
+                colour_swatches[i].configure(bg=value)
+            except tk.TclError:
+                pass
+            commit_custom()
+
+    def choose_theme_colour(i):
+        c = colorchooser.askcolor(color=colour_vars[i].get() or "#ffffff", parent=root)
+        if c and c[1]:
+            colour_vars[i].set(c[1])
+
+    def ask_theme_name(title, initial, allow=None):
+        while True:
+            name = simpledialog.askstring(title, "Theme name:", initialvalue=initial, parent=root)
+            if name is None:
+                return None
+            problem = themes.check_theme_name(name, theme_name_list(), allow=allow)
+            if not problem:
+                return name.strip()
+            messagebox.showerror("Theme editor", problem, parent=root)
+            initial = name
+
+    def add_theme(name, colours):
+        custom_state["themes"][name] = list(colours)
+        rebuild_theme_menu()
+        commit_custom()
+        theme_var.set(name)
+        refresh_editor()
+
+    def room_for_theme():
+        if len(custom_state["themes"]) >= themes.MAX_CUSTOM_THEMES:
+            messagebox.showerror("Theme editor", f"You can keep at most {themes.MAX_CUSTOM_THEMES} custom themes.",
+                                 parent=root)
+            return False
+        return True
+
+    def on_new_theme():
+        if not room_for_theme():
+            return
+        name = ask_theme_name("New theme", "My theme")
+        if name:
+            add_theme(name, themes.THEMES[themes.DEFAULT_THEME])
+
+    def on_duplicate_theme():
+        if not room_for_theme():
+            return
+        source = theme_var.get()
+        name = ask_theme_name("Duplicate theme", themes.copy_name(source, theme_name_list()))
+        if name:
+            add_theme(name, themes.theme_colors(source, {"custom_themes": custom_state["themes"]}))
+
+    def on_rename_theme():
+        old = editing_name()
+        if not old:
+            return
+        new = ask_theme_name("Rename theme", old, allow=old)
+        if not new or new == old:
+            return
+        custom_state["themes"][new] = custom_state["themes"].pop(old)
+        rebuild_theme_menu()
+        commit_custom()
+        theme_var.set(new)
+        refresh_editor()
+
+    def on_delete_theme():
+        old = editing_name()
+        if not old:
+            return
+        if not messagebox.askyesno("Delete theme", f"Delete the theme '{old}'?\n\nThe lock screen goes back to "
+                                   f"'{themes.DEFAULT_THEME}'.", parent=root):
+            return
+        del custom_state["themes"][old]
+        rebuild_theme_menu()
+        commit_custom()
+        theme_var.set(themes.DEFAULT_THEME)
+        refresh_editor()
+
+    editor_btns = tk.Frame(t_look)
+    editor_btns.pack(anchor="w", padx=20, pady=(0, 6))
+    tk.Button(editor_btns, text="New", command=on_new_theme).pack(side="left")
+    tk.Button(editor_btns, text="Duplicate", command=on_duplicate_theme).pack(side="left", padx=(8, 0))
+    rename_btn = tk.Button(editor_btns, text="Rename", command=on_rename_theme)
+    rename_btn.pack(side="left", padx=(8, 0))
+    delete_btn = tk.Button(editor_btns, text="Delete", command=on_delete_theme)
+    delete_btn.pack(side="left", padx=(8, 0))
+
+    for i, role in enumerate(colour_roles):
+        row = tk.Frame(t_look)
+        row.pack(anchor="w", padx=20, pady=(0, 3))
+        tk.Label(row, text=role + ":", width=18, anchor="w").pack(side="left")
+        swatch = tk.Label(row, text="    ", bg="#000000", relief="solid", bd=1)
+        swatch.pack(side="left", padx=(0, 6))
+        entry = tk.Entry(row, textvariable=colour_vars[i], width=10)
+        entry.pack(side="left")
+        button = tk.Button(row, text="Choose...", command=lambda i=i: choose_theme_colour(i))
+        button.pack(side="left", padx=(8, 0))
+        colour_swatches.append(swatch)
+        colour_entries.append(entry)
+        colour_buttons.append(button)
+        colour_vars[i].trace_add("write", lambda *_a, i=i: on_colour_edit(i))
+    pad(tk.Label(t_look, textvariable=editor_msg_var, font=("Consolas", 8), fg=MUTED), pady=(0, 8))
+    theme_var.trace_add("write", refresh_editor)
+    refresh_editor()
     font_var = tk.StringVar(value=str(cfg.get("font_family", "Consolas")))
     pad(tk.Label(t_look, text="Interface font:"), pady=(0, 3))
     pad(tk.OptionMenu(t_look, font_var, "Consolas", "Bahnschrift", "Segoe UI", "Courier New"), pady=(0, 8))
@@ -1100,6 +1276,8 @@ def main():
             "max_attempts": num(max_attempts_var, 0, 0, 100),
             "lockout_seconds": num(lockout_seconds_var, 15, 1, 300),
             "theme": theme_var.get(),
+            "advanced_view": advanced_var.get(),
+            "custom_themes": themes.clean_custom_themes(custom_state["themes"]),
             "font_family": font_var.get(),
             "ui_scale": num(ui_scale_var, 100, 75, 150),
             "scanlines": scanlines_var.get(),
@@ -1145,7 +1323,7 @@ def main():
         problem = validation_problem()
         if problem:
             key, message = problem
-            notebook.select(tab_by_key[key])
+            select_tab(key)
             messagebox.showerror("Theme pack", message, parent=root)
             return None
         return {**cfg, **collect_cfg()}
@@ -1159,7 +1337,7 @@ def main():
             return
         want_protections = pack_protect_var.get()
         if want_protections and not current.get("emergency_password_hash"):
-            notebook.select(tab_by_key["protection"])
+            select_tab("protection")
             messagebox.showerror(
                 "Theme pack",
                 "Set an emergency password first (Protection tab, then Save), so you can always get back "
@@ -1186,10 +1364,11 @@ def main():
             pack_busy["on"] = False
             messagebox.showerror("Theme pack", str(exc), parent=root)
             return
-        text = f"'{pack['name']}' applied. Settings will close now; open them again to see the new values."
+        text = f"'{pack['name']}' applied. The settings window reloads to show the new values."
         if warnings:
             text += "\n\nNotes:\n- " + "\n- ".join(warnings)
         messagebox.showinfo("Theme pack", text, parent=root)
+        reopen["tab"] = "home" if notebook.select() == str(tab_by_key.get("home")) else "look"
         root.destroy()
 
     def on_undo_pack():
@@ -1211,7 +1390,8 @@ def main():
             pack_busy["on"] = False
             messagebox.showerror("Theme pack", str(exc), parent=root)
             return
-        messagebox.showinfo("Theme pack", "Previous settings restored. Settings will close now.", parent=root)
+        messagebox.showinfo("Theme pack", "Previous settings restored. The settings window reloads.", parent=root)
+        reopen["tab"] = "home" if notebook.select() == str(tab_by_key.get("home")) else "look"
         root.destroy()
 
     def on_open_pack_folder():
@@ -1237,7 +1417,7 @@ def main():
         problem = validation_problem()
         if problem:
             key, message = problem
-            notebook.select(tab_by_key[key])
+            select_tab(key)
             messagebox.showerror("Cannot save", message, parent=root)
             return
 
@@ -1252,11 +1432,11 @@ def main():
             })
         elif emergency_pw_var.get() or emergency_pw2_var.get():
             if emergency_pw_var.get() != emergency_pw2_var.get():
-                notebook.select(tab_by_key["protection"])
+                select_tab("protection")
                 messagebox.showerror("Emergency password", "The two passwords do not match.", parent=root)
                 return
             if len(emergency_pw_var.get()) < 6:
-                notebook.select(tab_by_key["protection"])
+                select_tab("protection")
                 messagebox.showerror("Emergency password", "Use at least 6 characters.", parent=root)
                 return
             new_cfg.update(phrase_lock.set_emergency_password(emergency_pw_var.get()))
@@ -1280,6 +1460,92 @@ def main():
         schedule_end_var.set(cfg.get("schedule_end", "23:59"))
         flash_saved()
 
+    # ------------------------------------------------------------ home tab
+    # The essentials on one page. The other tabs stay available behind "Show advanced settings".
+    advanced_tabs = list(notebook.tabs())
+    t_home = new_tab("home", "  Home  ")
+    notebook.insert(0, tab_by_key["home"])
+    advanced_var = tk.BooleanVar(value=bool(cfg.get("advanced_view", True)))
+
+    def apply_advanced_view(*_):
+        for tab in advanced_tabs:
+            if advanced_var.get():
+                notebook.add(tab)          # shows a hidden tab again, in its old place
+            else:
+                notebook.hide(tab)
+
+    def select_tab(key):
+        if key != "home" and not advanced_var.get():
+            advanced_var.set(True)
+        if key in tab_by_key:
+            notebook.select(tab_by_key[key])
+
+    heading(t_home, "[00] QUICK START")
+    note(t_home, "The essentials in one place. Turn PhraseLock on or off with the switch at the top of "
+                 "the window; everything else is under Show advanced settings (bottom of this page).")
+
+    heading(t_home, "STYLE")
+    if available_packs:
+        pad(tk.OptionMenu(t_home, pack_choice_var, *[p["name"] for p in available_packs]), pady=(0, 4))
+        pad(tk.Label(t_home, textvariable=pack_desc_var, font=("Consolas", 9), fg=MUTED,
+                     wraplength=620, justify="left"), pady=(0, 6))
+        pad(tk.Checkbutton(t_home, text="Also enable the style's protections (strict mode, idle lock...) "
+                                        "- needs an emergency password", variable=pack_protect_var), pady=(0, 6))
+        home_pack_btns = tk.Frame(t_home)
+        home_pack_btns.pack(anchor="w", padx=20, pady=(0, 6))
+        tk.Button(home_pack_btns, text="Apply style...", command=lambda: on_apply_pack()).pack(side="left")
+        tk.Button(home_pack_btns, text="Undo last style", command=lambda: on_undo_pack()).pack(side="left", padx=(8, 0))
+    else:
+        note(t_home, "No style was found next to PhraseLock.")
+
+    heading(t_home, "DIFFICULTY")
+    pad(tk.OptionMenu(t_home, difficulty_var, "all", "easy", "normal", "hard", "extreme"), pady=(0, 8))
+
+    heading(t_home, "EMERGENCY PASSWORD")
+    pad(tk.Label(t_home, textvariable=emergency_status_var, font=("Consolas", 9)))
+    note(t_home, "Unlocks the computer if you ever get stuck. Strongly recommended.", size=8)
+
+    def on_home_password():
+        nonlocal cfg
+        problem = validation_problem()
+        if problem:
+            select_tab(problem[0])
+            messagebox.showerror("Emergency password", problem[1], parent=root)
+            return
+        first = simpledialog.askstring("Emergency password",
+                                       f"New password (at least {wizard.MIN_PASSWORD_LENGTH} characters):",
+                                       show="*", parent=root)
+        if first is None:
+            return
+        second = simpledialog.askstring("Emergency password", "Repeat it:", show="*", parent=root)
+        if second is None:
+            return
+        error = wizard.validate_password(first, second) if first else "Type a password."
+        if error:
+            messagebox.showerror("Emergency password", error, parent=root)
+            return
+        new_cfg = {**cfg, **collect_cfg(), **phrase_lock.set_emergency_password(first)}
+        save_config(new_cfg)
+        cfg = new_cfg
+        emergency_status_var.set("Emergency password: configured")
+        flash_saved()
+
+    pad(tk.Button(t_home, text="Set or change the password...", command=on_home_password), pady=(0, 10))
+
+    heading(t_home, "MORE")
+    pad(tk.Checkbutton(t_home, text="Show advanced settings (Phrases, Look, Rules, Protection, Stats)",
+                       variable=advanced_var), pady=(0, 6))
+
+    def on_rerun_wizard():
+        if messagebox.askyesno("Setup wizard", "Run the setup wizard again?\n\nIt asks a few questions and "
+                               "then replaces your style, difficulty and rules with your answers.", parent=root):
+            reopen["wizard"] = True
+            root.destroy()
+
+    pad(tk.Button(t_home, text="Run the setup wizard again...", command=on_rerun_wizard), pady=(0, 12))
+    advanced_var.trace_add("write", apply_advanced_view)
+    apply_advanced_view()
+
     # ---------------------------------------------------------------- footer
     def footer_btn(text, command, side, bg=CARD_ALT, fg=TEXT):
         tk.Button(footer, text=text, command=command, bg=bg, fg=fg,
@@ -1301,7 +1567,7 @@ def main():
 
     watched_vars = [
         enabled_var, title_var, phrases_file_var, difficulty_var, theme_var, font_var,
-        ui_scale_var, scanlines_var, glow_var, glitch_var, bg_images_var, bg_mode_var,
+        ui_scale_var, custom_json_var, advanced_var, scanlines_var, glow_var, glitch_var, bg_images_var, bg_mode_var,
         all_screens_var, *screen_vars.values(), bg_per_screen_var, animate_gif_var, *mode_vars.values(), panel_color_var, panel_opacity_var, play_sound_var, sound_error_var,
         success_sound_var, error_sound_var, repeats_var, reset_on_error_var,
         strict_mode_var, weighting_var, disable_paste_var, case_insensitive_var,
@@ -1353,7 +1619,15 @@ def main():
         txt.bind("<KeyRelease>", schedule_autosave, add="+")
         txt.bind("<FocusOut>", schedule_autosave, add="+")
     
+    if start_tab in tab_by_key:
+        select_tab(start_tab)
+
     root.mainloop()
+    if reopen["wizard"]:
+        wizard.run(load_config())
+        main(start_tab="home")
+    elif reopen["tab"]:
+        main(start_tab=reopen["tab"])
 
 
 if __name__ == "__main__":

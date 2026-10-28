@@ -11,7 +11,9 @@ Customize your phrases, choose a visual theme, track your progress, and make eac
 ## ✨ Features
 
 - **Custom typing challenges** — use your own phrases and challenge styles.
-- **Theme packs** — one click in *Settings > Look* applies phrases, theme, backgrounds, sounds, interface texts and challenge rules together. The first pack is **TechDom** (a calm sysadmin called Vex); the last pack can be undone, and a pack never touches your emergency password.
+- **First-launch setup wizard and a simple Home tab** — on first launch a short wizard asks for a style (TechDom, PetDom or the default look), a difficulty, how strict to be and an optional emergency password. New users then see only a **Home** tab with the essentials; *Show advanced settings* brings back Phrases, Look, Rules, Protection and Stats. Existing installs are unchanged.
+- **Theme editor** — *Settings > Look > Theme editor* creates, renames, duplicates and deletes your own colour themes (three colours each, with a picker). Built-in themes are duplicated to start from them.
+- **Theme packs** — one click in *Settings > Look* applies phrases, theme, backgrounds, sounds, interface texts and challenge rules together. Packs included: **TechDom** (a calm sysadmin called Vex) and **PetDom** (Juno, a warm but firm handler); the last pack can be undone, and a pack never touches your emergency password.
 - **Customizable settings** — configure the experience to suit your preferences.
 - **Progress tracking** — features in the source include streaks, daily goals, XP, levels, and badges.
 - **Phrase libraries** — support for external TXT, CSV, and JSON phrase collections.
@@ -171,9 +173,10 @@ Running the tests before building helps identify problems in the project's teste
 | `media.py`              | Media and audio functionality        |
 | `gifbg.py`              | Animated GIF background decoding and timing |
 | `hotkeys.py`            | Parsing of the pause hotkey text     |
-| `themes.py`             | Colour themes and lock-screen texts  |
+| `themes.py`             | Colour themes (built-in and custom) and lock-screen texts |
 | `packs.py`              | Theme pack loading, applying, undo   |
-| `packs/`                | Theme packs (`packs/techdom/` has its own README) |
+| `wizard.py`             | First-launch setup wizard            |
+| `packs/`                | Theme packs (`packs/techdom/` and `packs/petdom/` have their own README) |
 | `PhraseLockWatchdog.py` | Optional watchdog functionality      |
 | `tray.py`               | System tray status icon              |
 | `appicon.py`            | Shared application icon helpers      |
