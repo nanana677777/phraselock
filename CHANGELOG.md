@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-29
+
 ### Added
 - **Update checker.** *Settings > Home > Updates* compares your version with the latest GitHub release: a **Check for updates** button, and an automatic check at most once a day when Settings opens (can be turned off). When a newer release exists a **Download** button opens its page. One request to the public GitHub API, nothing about you is sent; a failed check (offline) is just reported. New `updatecheck.py` and settings `check_updates`, `last_update_check`.
 - **Exit option in the tray menu.** Right-click the tray icon > **Exit PhraseLock** closes the background monitor and, if Auto-protection is on, its watchdog first so nothing restarts it. It asks for confirmation, and for the emergency password (3 tries) when one is set, so it cannot be used to dodge the lock. New `exit_app.py` and the `--exit-monitor` argument.
