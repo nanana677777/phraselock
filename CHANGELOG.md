@@ -8,6 +8,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Send feedback.** *Settings > Home > Send feedback* opens the project's GitHub "Feedback / feature request" form in your browser, already filled with your PhraseLock version (a free GitHub account is needed). Nothing is sent from PhraseLock itself. If no browser can be opened, the link is copied to the clipboard. New `feedback.py`.
 - **Text position.** *Settings > Look > Text position* moves the phrase panel on the lock screen: center (default), top, bottom, or custom with two sliders (the panel always stays fully on screen). New settings `panel_position`, `panel_custom_x`, `panel_custom_y`.
 - **Typing progress bar.** Optional bar above the entry box showing how much of the phrase is correct so far, updated as you type (*Settings > Look*, `show_typing_progress`, off by default).
 - **Keep what I typed correctly after a typo.** *Settings > Rules*: instead of clearing the entry box after a mistake, keep the correctly typed beginning and carry on from there (`keep_correct_on_error`, off by default). Independent from "Reset the counter to 0 on a typo".

@@ -29,6 +29,7 @@ Customize your phrases, choose a visual theme, track your progress, and make eac
 - **System tray icon** — see at a glance that PhraseLock is running; open the settings, pause, switch **Style**, or **Exit PhraseLock** from the tray (the emergency password is asked first when one is set).
 - **Background gallery with drag and drop** — your backgrounds appear as small pictures (a × removes one, a scrollbar appears when there are many); drop PNG, JPG or GIF files on the box in *Settings > Look* to add them (Windows).
 - **Update checker** — *Settings > Home > Updates* compares your version with the latest GitHub release (manual button, plus an optional once-a-day check).
+- **Send feedback** — a button in *Settings > Home* opens the GitHub feedback form, pre-filled with your version.
 - **Uninstall and cleanup** — one button stops PhraseLock and removes its shortcut, data and `.exe` on request (see *Uninstall* below).
 - **Windows executable** — get started without manually running the Python source code.
 
@@ -201,6 +202,7 @@ Running the tests before building helps identify problems in the project's teste
 | `panelpos.py`, `typingaid.py` | Lock-screen panel position, typing progress helpers |
 | `styleswitch.py`        | Style switch from the tray menu |
 | `gallery.py`, `dropfiles.py`, `openpaths.py` | Background thumbnail gallery, drop zone, open settings folder / log |
+| `feedback.py`           | Send feedback (opens the pre-filled GitHub form) |
 | `uninstall.py`          | Uninstall and cleanup (processes, shortcut, data, exe) |
 | `packs/`                | Theme packs (`packs/techdom/` and `packs/petdom/` have their own README) |
 | `PhraseLockWatchdog.py` | Optional watchdog functionality      |

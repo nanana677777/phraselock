@@ -30,6 +30,7 @@ import themes
 import uikit
 import crashguard
 import dropfiles
+import feedback
 import gallery
 import openpaths
 import uninstall
@@ -1803,6 +1804,18 @@ def main(start_tab=None):
     home_files.pack(anchor="w", padx=20, pady=(0, 12))
     tk.Button(home_files, text="Open the settings folder", command=on_open_folder).pack(side="left")
     tk.Button(home_files, text="Open the log file", command=on_open_log).pack(side="left", padx=(8, 0))
+
+    def on_feedback():
+        ok, url = feedback.open_feedback()
+        if not ok:
+            root.clipboard_clear()
+            root.clipboard_append(url)
+            messagebox.showinfo("Send feedback", "Could not open your browser. The link was copied to the "
+                                "clipboard, paste it in your browser:\n\n" + url, parent=root)
+
+    tk.Button(home_files, text="Send feedback", command=on_feedback).pack(side="left", padx=(8, 0))
+    note(t_home, "Send feedback opens a pre-filled form on GitHub (a free account is needed). Nothing is sent "
+                 "from PhraseLock itself.", size=8)
     tk.Label(home_more, text=f"PhraseLock {__version__}", font=(UI_FONT, 9), fg=MUTED).pack(side="left", padx=(12, 0))
 
     heading(t_home, "UPDATES")

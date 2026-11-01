@@ -49,7 +49,7 @@
 - [ ] Add keyboard shortcuts for common actions
 - [ ] Add a privacy section explaining what data PhraseLock stores locally
 - [ ] Add a bug report feature ("bug found")
-- [ ] Add a feedback feature
+- [x] Add a feedback feature
 - [ ] Add a repo description and topics (the About box is empty)
 - [x] Add a `CHANGELOG.md` and short release notes for each version
 - [ ] Move the modules into a `phraselock/` package folder
