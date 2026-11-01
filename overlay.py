@@ -27,6 +27,8 @@ from stats import (
     record_stat, update_streak, add_progress, verify_emergency_password, apply_emergency_penalty,
 )
 
+from panelpos import panel_origin, normalize_position
+from typingaid import correct_prefix, progress_fraction
 from emergency import steps as emergency_steps, apply_penalty, CONFIRM_DELAY_SECONDS
 from phrases import pick_phrase, remember_last_phrase, get_last_phrase
 from monitors import (
@@ -296,6 +298,7 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
     title = cfg.get("title", DEFAULT_CONFIG["title"])
     required = max(1, int(cfg.get("required_repeats", 1) or 1))
     reset_on_error = bool(cfg.get("reset_on_error", True))
+    keep_correct_on_error = bool(cfg.get("keep_correct_on_error", False))
     panel_color = cfg.get("panel_color") or "#1a1a2e"
     try:
         panel_opacity = max(10, min(100, int(cfg.get("panel_opacity", 100)))) / 100.0
@@ -409,8 +412,9 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
 
     panel_w = 700
     panel_h = 420
-    panel_x = max(0, (screen_w - panel_w) // 2)
-    panel_y = max(0, (screen_h - panel_h) // 2)
+    panel_x, panel_y = panel_origin(
+        normalize_position(cfg.get("panel_position", "center")), screen_w, screen_h, panel_w, panel_h,
+        cfg.get("panel_custom_x", 50), cfg.get("panel_custom_y", 50))
     panel_rect_color = ImageColor.getrgb(panel_color) if pil_available else (26, 26, 46)
 
     panel_box = (panel_x, panel_y, panel_x + panel_w, panel_y + panel_h)
@@ -537,6 +541,22 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
                      highlightbackground="#30303a")
     entry.place(x=panel_x + pad_x, y=panel_y + 244, width=content_w, height=34)
     entry.focus_force()
+
+    # Optional bar above the entry: how much of the phrase is right so far (Settings > Look).
+    if cfg.get("show_typing_progress", False):
+        bar_y = 233
+        content.create_rectangle(pad_x, bar_y, pad_x + content_w, bar_y + 5, fill="#1d1d28", outline="")
+        bar_id = content.create_rectangle(pad_x, bar_y, pad_x, bar_y + 5, fill=tech_cyan, outline="")
+
+        def update_bar(*_):
+            try:
+                share = progress_fraction(entry_var.get(), current_phrase_var.get(), case_insensitive)
+                content.coords(bar_id, pad_x, bar_y, pad_x + int(content_w * share), bar_y + 5)
+            except tk.TclError:
+                pass
+
+        entry_var.trace_add("write", update_bar)
+        current_phrase_var.trace_add("write", update_bar)
 
     if disable_paste:
         for seq in ("<<Paste>>", "<Control-v>", "<Control-V>", "<Shift-Insert>"):
@@ -824,7 +844,11 @@ def show_overlay(cfg, phrase_items, record_stats=True, preview=False, standby=No
                     root.after(70, lambda: glitch_step(n + 1))
 
                 glitch_step()
-            entry_var.set("")
+            if keep_correct_on_error:
+                entry_var.set(correct_prefix(typed_raw, current_phrase_var.get(), case_insensitive)[1])
+                entry.icursor("end")
+            else:
+                entry_var.set("")
             if max_attempts and state["attempts"] >= max_attempts:
                 error_label.config(text=ui_text(cfg, "lockout", "LOCKOUT // RETRY IN {n}s", n=lockout_seconds))
                 submit_btn.config(state="disabled")

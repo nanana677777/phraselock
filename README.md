@@ -23,9 +23,11 @@ Customize your phrases, choose a visual theme, track your progress, and make eac
 - **Several background images** — add as many pictures as you like; one is picked at random each time the lock appears, optionally a different one on each screen.
 - **Multi-screen support** — lock the primary screen, any screen, several screens, or all of them.
 - **Emergency recovery** — configure an emergency password before using protection features. Using it goes through 1 to 5 "are you sure?" screens (configurable, worded by the active pack) and can optionally cost you your streak and/or some XP.
+- **Lock-screen layout** — choose where the phrase panel sits (center, top, bottom, custom), show a progress bar of the phrase typed correctly, and keep the correct beginning after a typo if you prefer.
 - **Lock-screen info switches** — *Settings > Look > Lock-screen info* shows or hides the round counter, the first-try streak line and the daily goal / level / XP line.
 - **Pause** — pause PhraseLock for 5 minutes to 1 hour from the tray icon, or with an optional global hotkey, without typing the phrase.
-- **System tray icon** — see at a glance that PhraseLock is running; open the settings, pause, or **Exit PhraseLock** from the tray (the emergency password is asked first when one is set).
+- **System tray icon** — see at a glance that PhraseLock is running; open the settings, pause, switch **Style**, or **Exit PhraseLock** from the tray (the emergency password is asked first when one is set).
+- **Drag and drop backgrounds** — drop PNG, JPG or GIF files on the box in *Settings > Look* to add them as backgrounds (Windows).
 - **Update checker** — *Settings > Home > Updates* compares your version with the latest GitHub release (manual button, plus an optional once-a-day check).
 - **Uninstall and cleanup** — one button stops PhraseLock and removes its shortcut, data and `.exe` on request (see *Uninstall* below).
 - **Windows executable** — get started without manually running the Python source code.
@@ -107,6 +109,8 @@ The documented JSON format uses objects like this:
   }
 ]
 ```
+
+The easiest way to make a file is *Settings > Phrases > Create or edit a phrase file...*: add phrases one by one or paste many (`phrase | category | difficulty`), then save a CSV, JSON or TXT file and use it immediately.
 
 For TXT files, use the format expected by the phrase loader in the source code. If a file fails to load, check the examples and parsing logic in [`phrases.py`](phrases.py).
 
@@ -193,6 +197,10 @@ Running the tests before building helps identify problems in the project's teste
 | `updatecheck.py`        | Update checker (latest GitHub release) |
 | `emergency.py`          | Emergency unlock confirmation screens and penalty |
 | `crashguard.py`         | Crash-loop guard (turns protection off after repeated failures) |
+| `phraseeditor.py`       | Phrase file editor (create, edit, import, save) |
+| `panelpos.py`, `typingaid.py` | Lock-screen panel position, typing progress helpers |
+| `styleswitch.py`        | Style switch from the tray menu |
+| `dropfiles.py`, `openpaths.py` | Background drop zone, open settings folder / log |
 | `uninstall.py`          | Uninstall and cleanup (processes, shortcut, data, exe) |
 | `packs/`                | Theme packs (`packs/techdom/` and `packs/petdom/` have their own README) |
 | `PhraseLockWatchdog.py` | Optional watchdog functionality      |

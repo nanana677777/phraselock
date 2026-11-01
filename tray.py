@@ -186,6 +186,42 @@ def _open_settings(icon=None, item=None):
 
 
 _last_exit_proc = None
+_last_style_proc = None
+
+
+def _switch_style(pack_id):
+    """Menu action: start the process that asks (if needed) and applies the style."""
+    def action(icon=None, item=None):
+        global _last_style_proc
+        try:
+            if _last_style_proc is not None and _last_style_proc.poll() is None:
+                return
+            flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            if getattr(sys, "frozen", False):
+                cmd = [sys.executable, "--switch-style", pack_id]
+            else:
+                script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "phrase_lock.py")
+                cmd = [sys.executable, script, "--switch-style", pack_id]
+            _last_style_proc = subprocess.Popen(cmd, creationflags=flags, env=_child_env(), close_fds=True)
+        except Exception:
+            import traceback
+            log("Could not start the style switch:\n" + traceback.format_exc())
+    return action
+
+
+def _checker(flag):
+    """A pystray 'checked' callback (one argument: the item) that always answers *flag*."""
+    return lambda item: flag
+
+
+def style_menu_entries():
+    """[(pack id, name, is_current)] for the tray's Style menu."""
+    try:
+        import packs
+        current = packs.last_applied_pack()
+        return [(p["id"], p["name"], p["id"] == current) for p in packs.list_packs()]
+    except Exception:
+        return []
 
 
 def _exit_app(icon=None, item=None):
@@ -250,6 +286,10 @@ def start_tray():
             pystray.MenuItem("Pause PhraseLock", pause_menu),
             pystray.MenuItem("Resume now", resume_now,
                              visible=lambda item: pause_remaining_seconds() > 0),
+            pystray.MenuItem("Style", pystray.Menu(lambda: tuple(
+                pystray.MenuItem(name, _switch_style(pack_id), checked=_checker(current), radio=True)
+                for pack_id, name, current in style_menu_entries())),
+                visible=lambda item: bool(style_menu_entries())),
             pystray.MenuItem("Open settings", _open_settings, default=True),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Exit PhraseLock", _exit_app),

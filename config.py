@@ -88,6 +88,11 @@ DEFAULT_CONFIG = {
     "manual_lock_hotkey": "",
     "pause_hotkey": "",          # e.g. "Ctrl+Alt+P": pause PhraseLock / resume, without the challenge ("" = off)
     "pause_minutes": 15,         # how long the hotkey pauses for
+    "panel_position": "center",  # lock screen: where the phrase panel sits (center, top, bottom, custom)
+    "panel_custom_x": 50,        # custom position, % of the free room: 0 = left edge, 100 = right edge
+    "panel_custom_y": 50,        # custom position, % of the free room: 0 = top edge, 100 = bottom edge
+    "show_typing_progress": False,   # lock screen: a bar showing how much of the phrase is correct so far
+    "keep_correct_on_error": False,  # after a typo keep the correctly typed beginning instead of clearing all
     "show_round_counter": True,  # lock screen: "[COMPLIANCE] 0 / 1 CONFIRMED" style round counter
     "show_streak_line": True,    # lock screen: first-try streak line
     "show_goal_line": True,      # lock screen: daily goal, level and XP line

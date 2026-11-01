@@ -23,9 +23,14 @@ import media
 import emergency as emergency_mod
 import hotkeys
 import packs
+import phraseeditor
+from panelpos import POSITIONS, normalize_position
+import phrases as phrases_mod
 import themes
 import uikit
 import crashguard
+import dropfiles
+import openpaths
 import uninstall
 import updatecheck
 import webbrowser
@@ -346,7 +351,7 @@ def main(start_tab=None):
         "DAILY GOAL": "Daily goal", "SCHEDULE MATRIX": "Schedule", "FOCUS SESSION": "Focus session",
         "IDLE LOCK": "Idle lock", "EMERGENCY OVERRIDE": "Emergency password",
         "WATCHDOG / AUTO-PROTECTION": "Auto-protection", "PAUSE / PANIC": "Pause",
-        "BOOT SEQUENCE": "Start with Windows", "UNINSTALL": "Uninstall and cleanup", "UPDATES": "Updates", "LOCK SCREEN INFO": "Lock-screen info", "QUICK START": "Quick start",
+        "BOOT SEQUENCE": "Start with Windows", "UNINSTALL": "Uninstall and cleanup", "UPDATES": "Updates", "TEXT POSITION": "Text position", "LOCK SCREEN INFO": "Lock-screen info", "QUICK START": "Quick start",
     }
 
     def heading(parent, text, color=None):
@@ -401,8 +406,27 @@ def main(start_tab=None):
             phrases_file_var.set(path)
 
     tk.Button(file_frame, text="Browse...", command=choose_phrases_file).pack(side="left", padx=(8, 0))
-    pad(tk.Button(t_phrases, text="Disable external file (use built-in phrases)",
-                  command=lambda: phrases_file_var.set("")), pady=(0, 10))
+    def on_phrase_editor():
+        current = phrases_file_var.get().strip().strip('"')
+        loaded = phrases_mod.load_external_phrases(current) if current else []
+        if loaded:
+            start, label = loaded, f"your file {os.path.basename(current)}"
+        else:
+            lines = [p.strip() for p in phrases_text.get("1.0", "end").splitlines() if p.strip()]
+            start, label = [{"text": p, "category": "General", "difficulty": "normal"} for p in lines], "the built-in list"
+        result = phraseeditor.open_editor(root, start, label)
+        if result:
+            path, use_now = result
+            if use_now:
+                phrases_file_var.set(path)
+            messagebox.showinfo("Phrase file", f"Saved:\n{path}" + ("\n\nPhraseLock now uses this file."
+                                if use_now else ""), parent=root)
+
+    editor_row = tk.Frame(t_phrases)
+    editor_row.pack(anchor="w", padx=20, pady=(0, 10))
+    tk.Button(editor_row, text="Create or edit a phrase file...", command=on_phrase_editor).pack(side="left")
+    tk.Button(editor_row, text="Disable external file (use built-in phrases)",
+              command=lambda: phrases_file_var.set("")).pack(side="left", padx=(8, 0))
 
     pad(tk.Label(t_phrases, text="Built-in phrases (one per line):"))
     phrases_text = tk.Text(t_phrases, height=6, width=70)
@@ -701,6 +725,27 @@ def main(start_tab=None):
     tk.Button(bg_buttons, text="Add URL...", command=add_image_url).pack(side="left", padx=(6, 0))
     tk.Button(bg_buttons, text="Remove selected", command=remove_selected_images).pack(side="left", padx=(6, 0))
     tk.Button(bg_buttons, text="Clear all (solid background)", command=clear_images).pack(side="left", padx=(6, 0))
+
+    drop_status_var = tk.StringVar(value="")
+    drop_zone = tk.Label(t_look, text="Drop PNG, JPG or GIF files here to use them as backgrounds",
+                         font=(UI_FONT, 10), fg=MUTED, bg=INPUT_BG, height=3, cursor="hand2",
+                         highlightthickness=1, highlightbackground=BORDER, highlightcolor=CYAN)
+    drop_zone.pack(anchor="w", padx=20, pady=(2, 2), fill="x")
+    drop_zone.bind("<Button-1>", lambda _e: choose_images())
+    pad(tk.Label(t_look, textvariable=drop_status_var, font=(UI_FONT, 9), fg=MUTED), pady=(0, 4))
+
+    def on_images_dropped(paths):
+        images, rejected = dropfiles.split_images(paths)
+        before = len(bg_list)
+        add_bg(images)
+        added = len(bg_list) - before
+        text = f"{added} image(s) added." if added else "Nothing new to add."
+        if rejected:
+            text += f" Ignored (not PNG, JPG, WEBP, BMP or GIF): {', '.join(os.path.basename(p) for p in rejected[:3])}"
+        drop_status_var.set(text)
+
+    drop_zone.on_drop = on_images_dropped       # also lets tests drop files without Explorer
+    dropfiles.enable_widget(drop_zone, on_images_dropped)
     refresh_bg_list()
     note(t_look, "With several images, one is picked at random each time the lock appears "
                  "(never the same one twice in a row). For online media, use a direct file URL "
@@ -840,7 +885,32 @@ def main(start_tab=None):
              command=lambda v: opacity_label_var.set(f"Opacity: {panel_opacity_var.get()}%"),
              length=260, showvalue=False, resolution=1).pack(side="left", padx=(12, 0))
 
-    heading(t_look, "[03] LOCK SCREEN INFO")
+    heading(t_look, "[03] TEXT POSITION")
+    note(t_look, "Where the phrase panel sits on the lock screen. 'custom' uses the two sliders: "
+                 "0% is the left or top edge, 100% the right or bottom edge.")
+    panel_position_var = tk.StringVar(value=normalize_position(cfg.get("panel_position", "center")))
+    pad(Dropdown(t_look, panel_position_var, *POSITIONS), pady=(0, 6))
+    panel_x_var = tk.IntVar(value=max(0, min(100, int(cfg.get("panel_custom_x", 50) or 0))))
+    panel_y_var = tk.IntVar(value=max(0, min(100, int(cfg.get("panel_custom_y", 50) or 0))))
+    pos_label_var = tk.StringVar()
+
+    def refresh_pos_label(*_):
+        pos_label_var.set(f"Custom position: {panel_x_var.get()}% across, {panel_y_var.get()}% down")
+
+    for var, text in ((panel_x_var, "Across"), (panel_y_var, "Down")):
+        frame = tk.Frame(t_look)
+        frame.pack(anchor="w", padx=20, pady=(0, 2), fill="x")
+        tk.Label(frame, text=text, width=8, anchor="w").pack(side="left")
+        tk.Scale(frame, from_=0, to=100, orient="horizontal", variable=var, command=refresh_pos_label,
+                 length=260, showvalue=False, resolution=1).pack(side="left")
+    refresh_pos_label()
+    pad(tk.Label(t_look, textvariable=pos_label_var, font=(UI_FONT, 9), fg=MUTED), pady=(0, 6))
+
+    show_typing_progress_var = tk.BooleanVar(value=cfg.get("show_typing_progress", False))
+    pad(Switch(t_look, text="Show a progress bar of the phrase typed correctly so far",
+               variable=show_typing_progress_var), pady=(0, 6))
+
+    heading(t_look, "[04] LOCK SCREEN INFO")
     note(t_look, "Choose which extra lines appear under the phrase on the lock screen. "
                  "Turning them off never changes the challenge itself.")
     show_round_var = tk.BooleanVar(value=cfg.get("show_round_counter", True))
@@ -850,7 +920,7 @@ def main(start_tab=None):
     pad(Switch(t_look, text="First-try streak", variable=show_streak_var))
     pad(Switch(t_look, text="Daily goal, level and XP", variable=show_goal_var), pady=(0, 6))
 
-    heading(t_look, "[04] AUDIO")
+    heading(t_look, "[05] AUDIO")
     play_sound_var = tk.BooleanVar(value=cfg.get("play_sound", False))
     pad(Switch(t_look, text="Play a sound when successfully unlocked", variable=play_sound_var))
     sound_error_var = tk.BooleanVar(value=cfg.get("sound_on_error", False))
@@ -913,6 +983,9 @@ def main(start_tab=None):
     pad(tk.Spinbox(t_rules, from_=1, to=20, textvariable=repeats_var, width=5), pady=(0, 8))
     reset_on_error_var = tk.BooleanVar(value=cfg.get("reset_on_error", True))
     pad(Switch(t_rules, text="Reset the counter to 0 on a typo", variable=reset_on_error_var))
+    keep_correct_var = tk.BooleanVar(value=cfg.get("keep_correct_on_error", False))
+    pad(Switch(t_rules, text="After a typo, keep the part I typed correctly (instead of clearing the box)",
+               variable=keep_correct_var))
     strict_mode_var = tk.BooleanVar(value=cfg.get("strict_mode", False))
     pad(Switch(t_rules, text="Strict Mode: any typo resets the whole challenge", variable=strict_mode_var))
     weighting_var = tk.BooleanVar(value=cfg.get("difficulty_weighting", True))
@@ -1361,6 +1434,11 @@ def main(start_tab=None):
             "panel_opacity": num(panel_opacity_var, 100, 10, 100),
             "required_repeats": num(repeats_var, 1, 1, 20),
             "reset_on_error": reset_on_error_var.get(),
+            "keep_correct_on_error": keep_correct_var.get(),
+            "panel_position": panel_position_var.get(),
+            "panel_custom_x": num(panel_x_var, 50, 0, 100),
+            "panel_custom_y": num(panel_y_var, 50, 0, 100),
+            "show_typing_progress": show_typing_progress_var.get(),
             "disable_paste": disable_paste_var.get(),
             "case_insensitive": case_insensitive_var.get(),
             "min_delay_seconds": num(min_delay_var, 0, 0, 60),
@@ -1717,6 +1795,21 @@ def main(start_tab=None):
     home_more.pack(anchor="w", padx=20, pady=(0, 12))
     tk.Button(home_more, text="Run the setup wizard again...", command=on_rerun_wizard).pack(side="left")
     tk.Button(home_more, text="What's new?", command=on_show_news).pack(side="left", padx=(8, 0))
+
+    def on_open_folder():
+        ok, message = openpaths.open_folder(CONFIG_DIR)
+        if not ok:
+            messagebox.showerror("Open folder", message, parent=root)
+
+    def on_open_log():
+        ok, message = openpaths.open_file(phrase_lock.LOG_PATH)
+        if not ok:
+            messagebox.showinfo("Log file", message, parent=root)
+
+    home_files = tk.Frame(t_home)
+    home_files.pack(anchor="w", padx=20, pady=(0, 12))
+    tk.Button(home_files, text="Open the settings folder", command=on_open_folder).pack(side="left")
+    tk.Button(home_files, text="Open the log file", command=on_open_log).pack(side="left", padx=(8, 0))
     tk.Label(home_more, text=f"PhraseLock {__version__}", font=(UI_FONT, 9), fg=MUTED).pack(side="left", padx=(12, 0))
 
     heading(t_home, "UPDATES")
@@ -1791,7 +1884,7 @@ def main(start_tab=None):
         enabled_var, title_var, phrases_file_var, difficulty_var, theme_var, font_var,
         ui_scale_var, custom_json_var, advanced_var, show_round_var, show_streak_var, show_goal_var, scanlines_var, glow_var, glitch_var, bg_images_var, bg_mode_var,
         all_screens_var, *screen_vars.values(), bg_per_screen_var, animate_gif_var, *mode_vars.values(), panel_color_var, panel_opacity_var, play_sound_var, sound_error_var,
-        success_sound_var, error_sound_var, repeats_var, reset_on_error_var,
+        success_sound_var, error_sound_var, repeats_var, reset_on_error_var, keep_correct_var, panel_position_var, panel_x_var, panel_y_var, show_typing_progress_var,
         strict_mode_var, weighting_var, disable_paste_var, case_insensitive_var,
         min_delay_var, max_attempts_var, lockout_seconds_var, daily_goal_var,
         schedule_enabled_var, schedule_start_var, schedule_end_var, focus_enabled_var,

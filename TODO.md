@@ -14,7 +14,7 @@
 - [ ] Add more default theme packs : Mommy/Daddy, Master/Mistress, Brat Tamer, FinDom, more...
 - [x] Add a "What's new?" window after updates
 - [x] Add a clear uninstall and cleanup process
-- [ ] Make the creation of file with new sentence easier
+- [x] Make the creation of file with new sentence easier
 - [x] Add multiple confirmation message if want to use the emergency password with penality potentially
 - [x] Add an update checker that compares the installed version with the latest GitHub release
 - [x] Add an exit option on the tray
@@ -32,20 +32,20 @@
 - [x] Add screenshots or a short GIF of the overlay to the README
 - [x] Add GitHub issue templates (Bug report, Feedback)
 - [ ] Add more unit tests, especially for `phrases.py` (CSV, JSON and TXT parsing) and `config.py`
-- [ ] Add text positioning controls (top, center, bottom, or custom position)
-- [ ] Add an optional progress bar showing how much of the phrase has been typed correctly
-- [ ] Add a choice between resetting the whole phrase or keeping the correctly typed portion after a mistake
-- [ ] Add one-click profile switching from the system tray
+- [x] Add text positioning controls (top, center, bottom, or custom position)
+- [x] Add an optional progress bar showing how much of the phrase has been typed correctly
+- [x] Add a choice between resetting the whole phrase or keeping the correctly typed portion after a mistake
+- [x] Add one-click profile switching from the system tray
 - [ ] Add a "Reset to defaults" button with a confirmation dialog
 - [ ] Add a local API or plugin system for third-party integrations (Discord integration?)
 - [ ] Update the screenshot on README in github
 
 ## 🟢 Low priority
 
-- [ ] Add drag-and-drop support for importing images, videos, audio, and phrase files
+- [x] Add drag-and-drop support for importing images, videos, audio, and phrase files
 - [ ] Add a schedule to activate specific profiles at certain times
-- [ ] Add a button to open the configuration folder
-- [ ] Add a button to open the current log file
+- [x] Add a button to open the configuration folder
+- [x] Add a button to open the current log file
 - [ ] Add keyboard shortcuts for common actions
 - [ ] Add a privacy section explaining what data PhraseLock stores locally
 - [ ] Add a bug report feature ("bug found")

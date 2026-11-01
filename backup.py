@@ -61,6 +61,8 @@ INT_RANGES = {
     "idle_lock_minutes": (1, 240),
     "xp": (0, 10 ** 12),
     "emergency_confirmations": (0, 5),
+    "panel_custom_x": (0, 100),
+    "panel_custom_y": (0, 100),
     "emergency_penalty_xp": (0, 500),
     "emergency_password_iterations": (1, 10_000_000),
 }

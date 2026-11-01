@@ -1,0 +1,337 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 83de201..9370f37 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -12,7 +12,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
+ - **Typing progress bar.** Optional bar above the entry box showing how much of the phrase is correct so far, updated as you type (*Settings > Look*, `show_typing_progress`, off by default).
+ - **Keep what I typed correctly after a typo.** *Settings > Rules*: instead of clearing the entry box after a mistake, keep the correctly typed beginning and carry on from there (`keep_correct_on_error`, off by default). Independent from "Reset the counter to 0 on a typo".
+ - **Switch style from the tray.** Right-click the tray icon > **Style** lists the theme packs (yours included) with a tick on the current one. Switching applies the pack exactly like *Apply* in Settings (protections are never changed) and asks for the emergency password first when one is set. New `styleswitch.py` and the `--switch-style` argument.
+-- **Drag and drop.** Drop files from Explorer onto the Settings window: a phrase file (.txt, .csv, .json) becomes the phrase file in use, images and GIFs are added to the backgrounds, a .wav or .mp3 becomes the success or error sound (you are asked which). Videos are refused with a message for now. Windows only, no extra package. New `dropfiles.py`.
++- **Background drop zone.** *Settings > Look > Background* has a box where you can drag PNG, JPG, WEBP, BMP or GIF files from Explorer to add them to the background list (clicking the box opens the file picker). Other files are ignored with a message. Windows only, no extra package. New `dropfiles.py`.
+ - **Open the settings folder / the log file.** Two buttons in *Settings > Home*. New `openpaths.py`.
+ - **Phrase file editor.** *Settings > Phrases > Create or edit a phrase file...* opens a window to build a phrase file without touching a text editor: a table of phrases (with category and difficulty), a form to add, update and delete, a box to paste many phrases at once (`phrase | category | difficulty`, tabs from a spreadsheet work too), file import, duplicate removal, sort by difficulty and warnings for very long phrases. It starts from your current file or the built-in list and saves a CSV, JSON or TXT file (in `%APPDATA%\PhraseLock\phrases` by default) that PhraseLock can use right away. New `phraseeditor.py`.
+ - **Crash-loop guard.** If the background monitor fails to start 5 times in 10 minutes, or the Auto-protection watchdog has to restart it 5 times in 10 minutes, PhraseLock turns itself off instead of looping: `enabled` and `auto_protection` are set to false, the watchdog stops, the reason goes to `phraselock.log` and `crash_guard.json`, and *Settings > Home* shows a red notice with a **Turn protection back on** button. A monitor that stays up for 3 minutes starts counting from zero again, so occasional restarts never trip it. New `crashguard.py`.
+diff --git a/README.md b/README.md
+index 19458ba..00b69f4 100644
+--- a/README.md
++++ b/README.md
+@@ -27,7 +27,7 @@ Customize your phrases, choose a visual theme, track your progress, and make eac
+ - **Lock-screen info switches** — *Settings > Look > Lock-screen info* shows or hides the round counter, the first-try streak line and the daily goal / level / XP line.
+ - **Pause** — pause PhraseLock for 5 minutes to 1 hour from the tray icon, or with an optional global hotkey, without typing the phrase.
+ - **System tray icon** — see at a glance that PhraseLock is running; open the settings, pause, switch **Style**, or **Exit PhraseLock** from the tray (the emergency password is asked first when one is set).
+-- **Drag and drop** — drop phrase files, images, GIFs and sounds onto the Settings window (Windows).
++- **Drag and drop backgrounds** — drop PNG, JPG or GIF files on the box in *Settings > Look* to add them as backgrounds (Windows).
+ - **Update checker** — *Settings > Home > Updates* compares your version with the latest GitHub release (manual button, plus an optional once-a-day check).
+ - **Uninstall and cleanup** — one button stops PhraseLock and removes its shortcut, data and `.exe` on request (see *Uninstall* below).
+ - **Windows executable** — get started without manually running the Python source code.
+@@ -200,7 +200,7 @@ Running the tests before building helps identify problems in the project's teste
+ | `phraseeditor.py`       | Phrase file editor (create, edit, import, save) |
+ | `panelpos.py`, `typingaid.py` | Lock-screen panel position, typing progress helpers |
+ | `styleswitch.py`        | Style switch from the tray menu |
+-| `dropfiles.py`, `openpaths.py` | Drag and drop of files, open settings folder / log |
++| `dropfiles.py`, `openpaths.py` | Background drop zone, open settings folder / log |
+ | `uninstall.py`          | Uninstall and cleanup (processes, shortcut, data, exe) |
+ | `packs/`                | Theme packs (`packs/techdom/` and `packs/petdom/` have their own README) |
+ | `PhraseLockWatchdog.py` | Optional watchdog functionality      |
+diff --git a/dropfiles.py b/dropfiles.py
+index ab2e69c..340852a 100644
+--- a/dropfiles.py
++++ b/dropfiles.py
+@@ -1,63 +1,55 @@
+-"""Drag and drop files onto the Settings window.
++"""Drag and drop of image files onto one widget of the Settings window (the background drop zone).
+ 
+ Tk has no built-in support for files dropped from Explorer, so on Windows this hooks the standard
+ WM_DROPFILES message with ctypes (no extra package). Everywhere else it does nothing. The part
+-that decides what a dropped file is (``classify``/``group``) is plain Python and is tested.
++that decides which dropped files are images (``split_images``) is plain Python and is tested.
+ """
+ 
+ import os
+ import sys
+ 
+-PHRASE_EXT = {".txt", ".csv", ".json"}
+ IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"}
+-AUDIO_EXT = {".wav", ".mp3"}
+-VIDEO_EXT = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".wmv"}
+-KINDS = ("phrases", "image", "audio", "video", "other")
+-
+-
+-def classify(path):
+-    """"phrases", "image", "audio", "video" or "other" for a dropped path."""
+-    if os.path.isdir(path):
+-        return "other"
+-    ext = os.path.splitext(str(path))[1].lower()
+-    if ext in PHRASE_EXT:
+-        return "phrases"
+-    if ext in IMAGE_EXT:
+-        return "image"
+-    if ext in AUDIO_EXT:
+-        return "audio"
+-    if ext in VIDEO_EXT:
+-        return "video"
+-    return "other"
+-
+-
+-def group(paths):
+-    """{"phrases": [...], "image": [...], ...} with every kind present, in drop order."""
+-    result = {kind: [] for kind in KINDS}
++
++
++def split_images(paths):
++    """(images, rejected): the dropped files PhraseLock can use as a background, and the others."""
++    images, rejected = [], []
+     for path in paths:
+-        result[classify(path)].append(path)
+-    return result
++        ok = not os.path.isdir(path) and os.path.splitext(str(path))[1].lower() in IMAGE_EXT
++        (images if ok else rejected).append(path)
++    return images, rejected
+ 
+ 
+ # ---------------------------------------------------------------------------
+ # Windows hook
+ # ---------------------------------------------------------------------------
+ 
++def _safe_call(callback, paths):
++    try:
++        callback(paths)
++    except Exception:
++        import traceback
++        _log("Handling dropped files failed:\n" + traceback.format_exc())
++
++
+ _hooks = {}          # hwnd -> original window procedure
++_handlers = {}       # hwnd -> (widget, callback)
+ _keep = {}           # keeps the ctypes callback alive for the life of the process
+ 
+ 
+-def _widgets(widget):
+-    yield widget
+-    for child in widget.winfo_children():
+-        yield from _widgets(child)
++def _log(text):
++    try:
++        from config import log
++        log(text)
++    except Exception:
++        pass
+ 
+ 
+-def enable_tree(root, callback):
+-    """Accept dropped files on *root* and every widget in it. callback(list_of_paths) is called in
+-    the Tk thread. Returns the number of windows hooked (0 off Windows or when it cannot be done)."""
++def enable_widget(widget, callback):
++    """Accept dropped files on this one widget only. callback(list_of_paths) is called in the Tk
++    thread. Returns True when the hook is in place (False off Windows or when it cannot be done)."""
+     if sys.platform != "win32":
+-        return 0
++        return False
+     try:
+         import ctypes
+         from ctypes import wintypes
+@@ -91,47 +83,36 @@ def enable_tree(root, callback):
+             if msg == WM_DROPFILES:
+                 try:
+                     paths = read_paths(wparam)
+-                    root.after(0, lambda: callback(paths))
++                    target_widget, target_callback = _handlers[hwnd]
++                    target_widget.after(0, lambda: _safe_call(target_callback, paths))
+                 except Exception:
+-                    pass
++                    import traceback
++                    _log("Drop failed:\n" + traceback.format_exc())
+                 return 0
+             if msg == 0x82:      # WM_NCDESTROY: the window is going away, forget it (handles get reused)
+                 old = _hooks.pop(hwnd, None)
++                _handlers.pop(hwnd, None)
+             else:
+                 old = _hooks.get(hwnd)
+             return user32.CallWindowProcW(old, hwnd, msg, wparam, lparam)
+ 
+-        _keep["proc"] = new_proc = wndproc_t(proc)
+-        root.update_idletasks()
+-        handles = set()
+-        for widget in _widgets(root):
+-            try:
+-                handles.add(widget.winfo_id())
+-            except Exception:
+-                pass
+-        top = user32.GetParent(root.winfo_id())
+-        if top:
+-            handles.add(top)
+-        hooked = 0
+-        for hwnd in handles:
+-            if hwnd in _hooks:
+-                continue
+-            try:
+-                user32.ChangeWindowMessageFilterEx(hwnd, WM_DROPFILES, MSGFLT_ALLOW, None)
+-                user32.ChangeWindowMessageFilterEx(hwnd, WM_COPYGLOBALDATA, MSGFLT_ALLOW, None)
+-                shell32.DragAcceptFiles(hwnd, True)
+-                old = set_long(hwnd, GWL_WNDPROC, ctypes.cast(new_proc, ctypes.c_void_p))
+-                if old:
+-                    _hooks[hwnd] = old
+-                    hooked += 1
+-            except Exception:
+-                continue
+-        return hooked
++        new_proc = _keep.get("proc")
++        if new_proc is None:
++            _keep["proc"] = new_proc = wndproc_t(proc)
++        widget.update_idletasks()
++        hwnd = widget.winfo_id()
++        _handlers[hwnd] = (widget, callback)
++        if hwnd in _hooks:
++            return True
++        user32.ChangeWindowMessageFilterEx(hwnd, WM_DROPFILES, MSGFLT_ALLOW, None)
++        user32.ChangeWindowMessageFilterEx(hwnd, WM_COPYGLOBALDATA, MSGFLT_ALLOW, None)
++        shell32.DragAcceptFiles(hwnd, True)
++        old = set_long(hwnd, GWL_WNDPROC, ctypes.cast(new_proc, ctypes.c_void_p))
++        if old:
++            _hooks[hwnd] = old
++            return True
++        return False
+     except Exception:
+-        try:
+-            from config import log
+-            import traceback
+-            log("Drag and drop could not be enabled:\n" + traceback.format_exc())
+-        except Exception:
+-            pass
+-        return 0
++        import traceback
++        _log("Drag and drop could not be enabled:\n" + traceback.format_exc())
++        return False
+diff --git a/settings.py b/settings.py
+index 016599c..0b6f4ca 100644
+--- a/settings.py
++++ b/settings.py
+@@ -725,6 +725,27 @@ def main(start_tab=None):
+     tk.Button(bg_buttons, text="Add URL...", command=add_image_url).pack(side="left", padx=(6, 0))
+     tk.Button(bg_buttons, text="Remove selected", command=remove_selected_images).pack(side="left", padx=(6, 0))
+     tk.Button(bg_buttons, text="Clear all (solid background)", command=clear_images).pack(side="left", padx=(6, 0))
++
++    drop_status_var = tk.StringVar(value="")
++    drop_zone = tk.Label(t_look, text="Drop PNG, JPG or GIF files here to use them as backgrounds",
++                         font=(UI_FONT, 10), fg=MUTED, bg=INPUT_BG, height=3, cursor="hand2",
++                         highlightthickness=1, highlightbackground=BORDER, highlightcolor=CYAN)
++    drop_zone.pack(anchor="w", padx=20, pady=(2, 2), fill="x")
++    drop_zone.bind("<Button-1>", lambda _e: choose_images())
++    pad(tk.Label(t_look, textvariable=drop_status_var, font=(UI_FONT, 9), fg=MUTED), pady=(0, 4))
++
++    def on_images_dropped(paths):
++        images, rejected = dropfiles.split_images(paths)
++        before = len(bg_list)
++        add_bg(images)
++        added = len(bg_list) - before
++        text = f"{added} image(s) added." if added else "Nothing new to add."
++        if rejected:
++            text += f" Ignored (not PNG, JPG, WEBP, BMP or GIF): {', '.join(os.path.basename(p) for p in rejected[:3])}"
++        drop_status_var.set(text)
++
++    drop_zone.on_drop = on_images_dropped       # also lets tests drop files without Explorer
++    dropfiles.enable_widget(drop_zone, on_images_dropped)
+     refresh_bg_list()
+     note(t_look, "With several images, one is picked at random each time the lock appears "
+                  "(never the same one twice in a row). For online media, use a direct file URL "
+@@ -1916,42 +1937,6 @@ def main(start_tab=None):
+     select_tab(start_tab if start_tab in tab_by_key else "home")
+     page_title_var.set(notebook.title_of())
+ 
+-    # ---------------------------------------------------- drag and drop
+-    def on_files_dropped(paths):
+-        """Files dragged from Explorer onto the window: phrase files, images and sounds."""
+-        kinds = dropfiles.group(paths)
+-        done, skipped = [], []
+-        for path in kinds["phrases"][:1]:
+-            if phrases_mod.load_external_phrases(path):
+-                phrases_file_var.set(path)
+-                select_tab("phrases")
+-                done.append(f"Phrase file in use: {os.path.basename(path)}")
+-            else:
+-                skipped.append(f"{os.path.basename(path)} (no phrase could be read from it)")
+-        skipped += [os.path.basename(p) + " (only one phrase file at a time)" for p in kinds["phrases"][1:]]
+-        if kinds["image"]:
+-            add_bg(kinds["image"])
+-            select_tab("look")
+-            done.append(f"{len(kinds['image'])} background image(s) added")
+-        for path in kinds["audio"][:1]:
+-            as_success = messagebox.askyesnocancel(
+-                "Sound", f"Use {os.path.basename(path)} as the SUCCESS sound?\n\n"
+-                         "Yes = success sound, No = error sound, Cancel = ignore.", parent=root)
+-            if as_success is None:
+-                continue
+-            (success_sound_var if as_success else error_sound_var).set(path)
+-            select_tab("look")
+-            done.append(f"{'Success' if as_success else 'Error'} sound: {os.path.basename(path)}")
+-        skipped += [os.path.basename(p) + " (only one sound at a time)" for p in kinds["audio"][1:]]
+-        skipped += [os.path.basename(p) + " (videos are not supported yet)" for p in kinds["video"]]
+-        skipped += [os.path.basename(p) + " (not a phrase, image or sound file)" for p in kinds["other"]]
+-        lines = done + (["", "Not used:"] + skipped if skipped else [])
+-        if lines:
+-            messagebox.showinfo("Files dropped", "\n".join(lines), parent=root)
+-
+-    root._on_files_dropped = on_files_dropped      # also lets tests drop files without Explorer
+-    dropfiles.enable_tree(root, on_files_dropped)
+-
+     root.mainloop()
+     if reopen["wizard"]:
+         wizard.run(load_config())
+diff --git a/tests/test_dropfiles.py b/tests/test_dropfiles.py
+index d677982..5e03ef6 100644
+--- a/tests/test_dropfiles.py
++++ b/tests/test_dropfiles.py
+@@ -5,35 +5,30 @@ import unittest
+ import dropfiles as d
+ 
+ 
+-class ClassifyTests(unittest.TestCase):
+-    def test_kinds(self):
+-        self.assertEqual(d.classify("a.TXT"), "phrases")
+-        self.assertEqual(d.classify("a.csv"), "phrases")
+-        self.assertEqual(d.classify("a.json"), "phrases")
+-        self.assertEqual(d.classify(r"C:\x\bg.PNG"), "image")
+-        self.assertEqual(d.classify("anim.gif"), "image")
+-        self.assertEqual(d.classify("ding.wav"), "audio")
+-        self.assertEqual(d.classify("ding.mp3"), "audio")
+-        self.assertEqual(d.classify("clip.mp4"), "video")
+-        self.assertEqual(d.classify("setup.exe"), "other")
+-        self.assertEqual(d.classify("noextension"), "other")
+-
+-    def test_folder_is_other(self):
++class SplitImagesTests(unittest.TestCase):
++    def test_images_are_kept_in_order(self):
++        images, rejected = d.split_images(["a.PNG", "b.gif", r"C:\x\c.jpeg", "d.webp", "e.bmp", "f.jpg"])
++        self.assertEqual(images, ["a.PNG", "b.gif", r"C:\x\c.jpeg", "d.webp", "e.bmp", "f.jpg"])
++        self.assertEqual(rejected, [])
++
++    def test_everything_else_is_rejected(self):
++        images, rejected = d.split_images(["a.png", "clip.mp4", "p.txt", "s.wav", "noext", "z.zip"])
++        self.assertEqual(images, ["a.png"])
++        self.assertEqual(rejected, ["clip.mp4", "p.txt", "s.wav", "noext", "z.zip"])
++
++    def test_folder_named_like_an_image_is_rejected(self):
+         with tempfile.TemporaryDirectory() as tmp:
+-            self.assertEqual(d.classify(tmp), "other")
++            folder = os.path.join(tmp, "pics.png")
++            os.mkdir(folder)
++            self.assertEqual(d.split_images([folder]), ([], [folder]))
+ 
+-    def test_group_keeps_order_and_all_kinds(self):
+-        groups = d.group(["1.png", "p.txt", "2.jpg", "s.wav", "v.mkv", "x.zip"])
+-        self.assertEqual(groups["image"], ["1.png", "2.jpg"])
+-        self.assertEqual(groups["phrases"], ["p.txt"])
+-        self.assertEqual((groups["audio"], groups["video"], groups["other"]), (["s.wav"], ["v.mkv"], ["x.zip"]))
+-        self.assertEqual(set(groups), set(d.KINDS))
+-        self.assertEqual(d.group([]), {kind: [] for kind in d.KINDS})
++    def test_empty(self):
++        self.assertEqual(d.split_images([]), ([], []))
+ 
+     def test_hook_is_a_noop_off_windows(self):
+         if os.name == "nt":
+             self.skipTest("Windows")
+-        self.assertEqual(d.enable_tree(object(), lambda paths: None), 0)
++        self.assertFalse(d.enable_widget(object(), lambda paths: None))
+ 
+ 
+ if __name__ == "__main__":

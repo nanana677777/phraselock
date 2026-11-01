@@ -77,6 +77,10 @@ if __name__ == "__main__":
         import settings
         settings.main()
         raise SystemExit
+    if "--switch-style" in sys.argv:
+        from styleswitch import run as switch_run
+        switch_run(sys.argv)
+        raise SystemExit
     if "--exit-monitor" in sys.argv:
         from exit_app import run as exit_run
         exit_run(sys.argv)
