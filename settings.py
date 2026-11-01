@@ -30,6 +30,7 @@ import themes
 import uikit
 import crashguard
 import dropfiles
+import gallery
 import openpaths
 import uninstall
 import updatecheck
@@ -674,18 +675,16 @@ def main(start_tab=None):
     bg_list = list(media.background_sources(cfg))
     # Mirrors the list so that the autosave notices every change.
     bg_images_var = tk.StringVar(value="\n".join(bg_list))
-    bg_frame = tk.Frame(t_look)
-    bg_frame.pack(anchor="w", padx=20, pady=(0, 5), fill="x")
-    bg_listbox = tk.Listbox(bg_frame, height=5, width=60, selectmode="extended", exportselection=False)
-    bg_scroll = tk.Scrollbar(bg_frame, orient="vertical", command=bg_listbox.yview)
-    bg_listbox.configure(yscrollcommand=bg_scroll.set)
-    bg_listbox.pack(side="left")
-    bg_scroll.pack(side="left", fill="y")
+    def remove_image(item):
+        if item in bg_list:
+            bg_list.remove(item)
+            refresh_bg_list()
+
+    bg_gallery = gallery.ThumbGallery(t_look, remove_image, pal, height=190, font=(UI_FONT, 8))
+    bg_gallery.pack(anchor="w", padx=20, pady=(0, 5), fill="x")
 
     def refresh_bg_list():
-        bg_listbox.delete(0, "end")
-        for item in bg_list:
-            bg_listbox.insert("end", item)
+        bg_gallery.set_items(bg_list)
         bg_images_var.set("\n".join(bg_list))
 
     def add_bg(items):
@@ -710,11 +709,6 @@ def main(start_tab=None):
         if url and url.strip():
             add_bg([url.strip()])
 
-    def remove_selected_images():
-        for i in sorted(bg_listbox.curselection(), reverse=True):
-            del bg_list[i]
-        refresh_bg_list()
-
     def clear_images():
         bg_list.clear()
         refresh_bg_list()
@@ -723,12 +717,11 @@ def main(start_tab=None):
     bg_buttons.pack(anchor="w", padx=20, pady=(0, 5))
     tk.Button(bg_buttons, text="Add files...", command=choose_images).pack(side="left")
     tk.Button(bg_buttons, text="Add URL...", command=add_image_url).pack(side="left", padx=(6, 0))
-    tk.Button(bg_buttons, text="Remove selected", command=remove_selected_images).pack(side="left", padx=(6, 0))
     tk.Button(bg_buttons, text="Clear all (solid background)", command=clear_images).pack(side="left", padx=(6, 0))
 
     drop_status_var = tk.StringVar(value="")
     drop_zone = tk.Label(t_look, text="Drop PNG, JPG or GIF files here to use them as backgrounds",
-                         font=(UI_FONT, 10), fg=MUTED, bg=INPUT_BG, height=3, cursor="hand2",
+                         font=(UI_FONT, 10), fg=MUTED, bg=INPUT_BG, height=2, cursor="hand2",
                          highlightthickness=1, highlightbackground=BORDER, highlightcolor=CYAN)
     drop_zone.pack(anchor="w", padx=20, pady=(2, 2), fill="x")
     drop_zone.bind("<Button-1>", lambda _e: choose_images())

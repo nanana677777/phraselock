@@ -27,7 +27,7 @@ Customize your phrases, choose a visual theme, track your progress, and make eac
 - **Lock-screen info switches** — *Settings > Look > Lock-screen info* shows or hides the round counter, the first-try streak line and the daily goal / level / XP line.
 - **Pause** — pause PhraseLock for 5 minutes to 1 hour from the tray icon, or with an optional global hotkey, without typing the phrase.
 - **System tray icon** — see at a glance that PhraseLock is running; open the settings, pause, switch **Style**, or **Exit PhraseLock** from the tray (the emergency password is asked first when one is set).
-- **Drag and drop backgrounds** — drop PNG, JPG or GIF files on the box in *Settings > Look* to add them as backgrounds (Windows).
+- **Background gallery with drag and drop** — your backgrounds appear as small pictures (a × removes one, a scrollbar appears when there are many); drop PNG, JPG or GIF files on the box in *Settings > Look* to add them (Windows).
 - **Update checker** — *Settings > Home > Updates* compares your version with the latest GitHub release (manual button, plus an optional once-a-day check).
 - **Uninstall and cleanup** — one button stops PhraseLock and removes its shortcut, data and `.exe` on request (see *Uninstall* below).
 - **Windows executable** — get started without manually running the Python source code.
@@ -200,7 +200,7 @@ Running the tests before building helps identify problems in the project's teste
 | `phraseeditor.py`       | Phrase file editor (create, edit, import, save) |
 | `panelpos.py`, `typingaid.py` | Lock-screen panel position, typing progress helpers |
 | `styleswitch.py`        | Style switch from the tray menu |
-| `dropfiles.py`, `openpaths.py` | Background drop zone, open settings folder / log |
+| `gallery.py`, `dropfiles.py`, `openpaths.py` | Background thumbnail gallery, drop zone, open settings folder / log |
 | `uninstall.py`          | Uninstall and cleanup (processes, shortcut, data, exe) |
 | `packs/`                | Theme packs (`packs/techdom/` and `packs/petdom/` have their own README) |
 | `PhraseLockWatchdog.py` | Optional watchdog functionality      |
