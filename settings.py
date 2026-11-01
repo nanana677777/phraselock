@@ -25,6 +25,7 @@ import hotkeys
 import packs
 import themes
 import uikit
+import crashguard
 import uninstall
 import updatecheck
 import webbrowser
@@ -1617,6 +1618,34 @@ def main(start_tab=None):
             advanced_var.set(True)
         if key in tab_by_key:
             notebook.select(tab_by_key[key])
+
+    guard_note = crashguard.tripped()
+    if guard_note and cfg.get("enabled", True):
+        crashguard.reset()            # already turned back on by hand: the note is out of date
+        guard_note = None
+    if guard_note:
+        guard_box = tk.Frame(t_home, bg=BAD_BG, highlightthickness=1,
+                             highlightbackground=DANGER)
+        guard_box.pack(anchor="w", fill="x", padx=20, pady=(12, 0))
+        tk.Label(guard_box, text="PhraseLock turned itself off", font=(UI_FONT, 11, "bold"), fg=DANGER,
+                 bg=guard_box.cget("bg")).pack(anchor="w", padx=12, pady=(10, 2))
+        tk.Label(guard_box, text=crashguard.describe(guard_note) + " Auto-protection stays off until you tick it "
+                 "again in the Protection tab.", font=(UI_FONT, 9), fg=TEXT, bg=guard_box.cget("bg"),
+                 wraplength=600, justify="left").pack(anchor="w", padx=12)
+
+        def on_guard_reenable():
+            enabled_var.set(True)
+            refresh_enabled_ui()
+            crashguard.reset()
+            try:
+                save_config({**load_config(), "enabled": True})
+            except Exception:
+                pass
+            guard_box.destroy()
+            flash_saved()
+
+        tk.Button(guard_box, text="Turn protection back on", command=on_guard_reenable).pack(
+            anchor="w", padx=12, pady=(8, 10))
 
     heading(t_home, "[00] QUICK START")
     note(t_home, "The essentials in one place. Turn PhraseLock on or off with the switch at the top of "

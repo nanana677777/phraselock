@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Crash-loop guard.** If the background monitor fails to start 5 times in 10 minutes, or the Auto-protection watchdog has to restart it 5 times in 10 minutes, PhraseLock turns itself off instead of looping: `enabled` and `auto_protection` are set to false, the watchdog stops, the reason goes to `phraselock.log` and `crash_guard.json`, and *Settings > Home* shows a red notice with a **Turn protection back on** button. A monitor that stays up for 3 minutes starts counting from zero again, so occasional restarts never trip it. New `crashguard.py`.
+
 ## [2.0.0] - 2026-10-29
 
 ### Added

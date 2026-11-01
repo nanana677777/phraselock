@@ -16,6 +16,8 @@ import subprocess
 
 import psutil
 
+import crashguard
+
 
 def log(message):
     try:
@@ -67,6 +69,11 @@ def main():
             pass
 
         if not is_running(target):
+            if crashguard.record("watchdog_restart"):
+                crashguard.trip("watchdog_restart")
+                log(f"CRASH LOOP: restarted PhraseLock {crashguard.LIMIT} times in "
+                    f"{crashguard.WINDOW_SECONDS // 60} minutes. Protection turned off; watchdog exiting.")
+                return
             log("PhraseLock process disappeared; restarting it.")
             try:
                 subprocess.Popen(

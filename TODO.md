@@ -1,14 +1,12 @@
 # PhraseLock – Things to do
 
-Tick a box when a feature is done (clickable on GitHub).
-
 ## 🔴 High priority
 
 - [x] Background image not the right scale: add display options (fit, fill, stretch, center, tile)
 - [x] Automatic save at every change, not only when clicking the Save button
 - [x] Display an icon in the hidden icons tray to show whether the software is running or not
 - [x] Add a panic hotkey or a "disable for X minutes" option that doesn't require the full challenge
-- [ ] Add a crash-loop guard: if the app or the watchdog fails several times in a row, it disables itself automatically
+- [x] Add a crash-loop guard: if the app or the watchdog fails several times in a row, it disables itself automatically
 - [x] Add a `LICENSE` file to the repo
 - [x] Add a first-launch setup wizard to guide users through their initial configuration
 - [x] Add a theme editor to create, rename, duplicate, and delete custom themes
@@ -40,6 +38,7 @@ Tick a box when a feature is done (clickable on GitHub).
 - [ ] Add one-click profile switching from the system tray
 - [ ] Add a "Reset to defaults" button with a confirmation dialog
 - [ ] Add a local API or plugin system for third-party integrations (Discord integration?)
+- [ ] Update the screenshot on README in github
 
 ## 🟢 Low priority
 

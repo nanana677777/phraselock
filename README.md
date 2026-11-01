@@ -126,6 +126,8 @@ Before enabling protection:
 
 If PhraseLock behaves unexpectedly, use the recovery instructions in the source code and configuration documentation. Do not enable automatic restart or strict protection until you have confirmed that you can recover safely.
 
+**Crash-loop guard.** If PhraseLock cannot start 5 times in 10 minutes (or its watchdog has to restart it that often), it switches protection and Auto-protection off by itself and tells you in *Settings > Home*, so a bug can never lock you in a restart loop. Check `%APPDATA%\PhraseLock\phraselock.log`, then use *Turn protection back on*.
+
 ## 🧹 Uninstall
 
 PhraseLock has no installer. Open *Settings > Protection > Uninstall and clean up...*, choose what to remove (stop it and its watchdog, the start-with-Windows shortcut, your data in `%APPDATA%\PhraseLock`, the `.exe`) and confirm. The emergency password is asked first if you set one. To do it by hand: close PhraseLock and PhraseLock Watchdog from the Task Manager, delete `PhraseLock.lnk` from the Startup folder (`Win+R`, `shell:startup`), then delete `%APPDATA%\PhraseLock` and the `.exe`.
@@ -190,6 +192,7 @@ Running the tests before building helps identify problems in the project's teste
 | `exit_app.py`           | "Exit PhraseLock" from the tray menu |
 | `updatecheck.py`        | Update checker (latest GitHub release) |
 | `emergency.py`          | Emergency unlock confirmation screens and penalty |
+| `crashguard.py`         | Crash-loop guard (turns protection off after repeated failures) |
 | `uninstall.py`          | Uninstall and cleanup (processes, shortcut, data, exe) |
 | `packs/`                | Theme packs (`packs/techdom/` and `packs/petdom/` have their own README) |
 | `PhraseLockWatchdog.py` | Optional watchdog functionality      |

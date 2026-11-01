@@ -39,6 +39,7 @@ from session import (
     start_watchdog,
 )
 
+import crashguard
 from tray import start_tray
 
 def _phrase_items_for_overlay(cfg):
@@ -50,6 +51,12 @@ def _run_monitor():
     if not acquire_single_instance(MONITOR_MUTEX_NAME):
         log("PhraseLock monitor is already running; exiting duplicate.")
         raise SystemExit
+    if crashguard.record("monitor_start"):
+        crashguard.trip("monitor_start")
+        log(f"CRASH LOOP: the monitor started {crashguard.LIMIT} times in {crashguard.WINDOW_SECONDS // 60} minutes. "
+            "Protection and Auto-protection were turned off; turn them back on in Settings > Home.")
+        raise SystemExit
+    crashguard.start_stability_timer()
     log("=== PhraseLock monitor started ===")
     try:
         cfg = load_config()
