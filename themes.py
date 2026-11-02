@@ -21,6 +21,7 @@ THEMES = {
     # Theme pack colours (see packs/<name>/pack.json).
     "TechDom": ("#0097a7", "#00e5ff", "#39ff88"),
     "PetDom": ("#ff8a3d", "#ffd54f", "#ff6f91"),
+    "Mistress": ("#b3123b", "#d4af37", "#e8a0bf"),
 }
 
 

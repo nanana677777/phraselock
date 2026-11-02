@@ -142,6 +142,11 @@ class ShippedPetDomTests(ShippedTechDomTests):
     PACK_ID = "petdom"
     PACK_NAME = "PetDom"
 
+
+class ShippedMistressTests(ShippedTechDomTests):
+    PACK_ID = "mistress"
+    PACK_NAME = "Mistress"
+
 class ThemeTests(unittest.TestCase):
     def test_existing_themes_keep_their_accent(self):
         self.assertEqual(themes.accent_for("Cyber Red"), "#ff1744")
@@ -495,7 +500,7 @@ class UserPackTests(unittest.TestCase):
         self.assertEqual(new["theme"], "TechDom")
 
     def test_every_shipped_pack_has_its_window_title(self):
-        for pack_id in ("techdom", "petdom"):
+        for pack_id in ("techdom", "petdom", "mistress"):
             texts = packs.load_pack(pack_id, REPO_PACKS)["ui_texts"]
             self.assertTrue(texts["app_title"].strip() and texts["app_kicker"].strip(), pack_id)
 

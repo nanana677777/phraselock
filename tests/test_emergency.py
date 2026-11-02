@@ -101,7 +101,7 @@ class PackTextTests(unittest.TestCase):
 
     def test_shipped_packs_have_complete_emergency_texts(self):
         import themes
-        for name in ("techdom", "petdom"):
+        for name in ("techdom", "petdom", "mistress"):
             with open(os.path.join("packs", name, "pack.json"), encoding="utf-8") as f:
                 texts = json.load(f)["ui_texts"]
             clean = themes.clean_ui_texts(texts)
