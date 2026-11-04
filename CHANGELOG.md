@@ -7,6 +7,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Goblin Queen theme pack.** Queen Rune, a vain and greedy goblin queen on a gilded throne: emerald, gold and royal purple `Goblin Queen` theme, 28 playful "kneel, piggie~" phrases, lowercase lock-screen and emergency wording, three original backgrounds (drapes, baroque pattern, throne), generated coin-clink and grunt sounds and strict rules (3 rounds, a typo resets, case-insensitive, 5 attempts then a 40 s time-out). Non-explicit, no real money involved; protections stay opt-in.
+
 ## [2.1.0] - 2026-11-02
 
 ### Added

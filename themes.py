@@ -22,6 +22,7 @@ THEMES = {
     "TechDom": ("#0097a7", "#00e5ff", "#39ff88"),
     "PetDom": ("#ff8a3d", "#ffd54f", "#ff6f91"),
     "Mistress": ("#b3123b", "#d4af37", "#e8a0bf"),
+    "Goblin Queen": ("#2fa84f", "#e0b341", "#9b59d0"),
 }
 
 

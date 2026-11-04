@@ -13,9 +13,9 @@ Customize your phrases, choose a visual theme, track your progress, and make eac
 - **Custom typing challenges** — use your own phrases and challenge styles.
 - **"What's new?" window** — after an update, Settings opens with a short list of what changed. Also under *Settings > Home > What's new?*.
 - **Window title per style, and your own packs** — the Settings header (kicker and title) comes from the active pack's `ui_texts` (`app_kicker`, `app_title`). *Settings > Look > Save my settings as a pack...* turns your current look and rules into a pack of your own in `%APPDATA%\PhraseLock\packs\<name>\`; edit its `pack.json` to change the title and texts. Your packs appear in the pack list next to the shipped ones.
-- **First-launch setup wizard and a simple Home tab** — on first launch a short wizard asks for a style (TechDom, PetDom, Mistress or the default look), a difficulty, how strict to be and an optional emergency password. New users then see only a **Home** tab with the essentials; *Show advanced settings* brings back Phrases, Look, Rules, Protection and Stats. Existing installs are unchanged.
+- **First-launch setup wizard and a simple Home tab** — on first launch a short wizard asks for a style (TechDom, PetDom, Mistress, Goblin Queen or the default look), a difficulty, how strict to be and an optional emergency password. New users then see only a **Home** tab with the essentials; *Show advanced settings* brings back Phrases, Look, Rules, Protection and Stats. Existing installs are unchanged.
 - **Theme editor** — *Settings > Look > Theme editor* creates, renames, duplicates and deletes your own colour themes (three colours each, with a picker). Built-in themes are duplicated to start from them.
-- **Theme packs** — one click in *Settings > Look* applies phrases, theme, backgrounds, sounds, interface texts and challenge rules together. Packs included: **TechDom** (a calm sysadmin called Vex) **PetDom** (Juno, a warm but firm handler) and **Mistress** (Mistress Vesper, an elegant and exacting authority); the last pack can be undone, and a pack never touches your emergency password.
+- **Theme packs** — one click in *Settings > Look* applies phrases, theme, backgrounds, sounds, interface texts and challenge rules together. Packs included: **TechDom** (a calm sysadmin called Vex) **PetDom** (Juno, a warm but firm handler) and **Mistress** (Mistress Vesper, an elegant and exacting authority) and **Goblin Queen** (Queen Rune, a vain, greedy goblin queen); the last pack can be undone, and a pack never touches your emergency password.
 - **Customizable settings** — configure the experience to suit your preferences.
 - **Progress tracking** — features in the source include streaks, daily goals, XP, levels, and badges.
 - **Phrase libraries** — support for external TXT, CSV, and JSON phrase collections.
@@ -204,7 +204,7 @@ Running the tests before building helps identify problems in the project's teste
 | `gallery.py`, `dropfiles.py`, `openpaths.py` | Background thumbnail gallery, drop zone, open settings folder / log |
 | `feedback.py`           | Send feedback (opens the pre-filled GitHub form) |
 | `uninstall.py`          | Uninstall and cleanup (processes, shortcut, data, exe) |
-| `packs/`                | Theme packs (`packs/techdom/`, `packs/petdom/` and `packs/mistress/` have their own README) |
+| `packs/`                | Theme packs (`packs/techdom/`, `packs/petdom/`, `packs/mistress/` and `packs/goblinqueen/` have their own README) |
 | `PhraseLockWatchdog.py` | Optional watchdog functionality      |
 | `tray.py`               | System tray status icon              |
 | `appicon.py`            | Shared application icon helpers      |

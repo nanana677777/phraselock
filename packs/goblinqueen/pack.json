@@ -1,0 +1,86 @@
+{
+  "name": "Goblin Queen",
+  "version": 1,
+  "description": "Queen Rune, a vain and greedy goblin queen on a gilded throne: emerald, gold and royal purple look, lowercase 'kneel, piggie~' wording, strict rules.",
+  "persona": {
+    "name": "Queen Rune",
+    "role": "Goblin Queen",
+    "personality": "Vain, greedy and delighted with herself. Holds court on a gilded throne surrounded by her pigs, talks in lowercase with a lot of '~', and expects tribute and obedience. Mistakes get a mocking 'again, piggie', never real anger."
+  },
+  "config": {
+    "title": "Court of Queen Rune",
+    "theme": "Goblin Queen",
+    "font_family": "Segoe UI",
+    "panel_color": "#0c0a12",
+    "panel_opacity": 92,
+    "scanlines": false,
+    "glow_effect": true,
+    "glitch_effect": false,
+    "background_mode": "fill",
+    "phrases_file": "phrases.csv",
+    "difficulty": "all",
+    "difficulty_weighting": true,
+    "play_sound": true,
+    "sound_on_error": true,
+    "success_sound": "audio/success.wav",
+    "error_sound": "audio/error.wav",
+    "sound_volume": 65,
+    "required_repeats": 3,
+    "reset_on_error": true,
+    "disable_paste": true,
+    "case_insensitive": true,
+    "min_delay_seconds": 3,
+    "max_attempts": 5,
+    "lockout_seconds": 40
+  },
+  "ui_texts": {
+    "app_kicker": "// RUNE :: THE PIG'S DEN",
+    "app_title": "GOBLIN QUEEN / TRIBUTE PROTOCOL",
+    "header": "~ THE COURT OF QUEEN RUNE ~",
+    "subtitle": "KNEEL. TYPE. OBEY~",
+    "button": "[ YES, MY QUEEN ]",
+    "round": "[TRIBUTE] {done} / {total} PAID",
+    "wait": "the queen is admiring herself: {n}s~",
+    "lockout": "BACK TO THE STY // {n}s",
+    "errors": [
+      "WRONG, PIGGIE // AGAIN~",
+      "THE QUEEN IS BORED // TRY AGAIN",
+      "LOOK CLOSER // ONE MORE TIME",
+      "SLOPPY // BEGIN AGAIN~"
+    ],
+    "emergency_open": "Beg the queen for the exit",
+    "emergency_title": "~ THE QUEEN'S MERCY ~",
+    "emergency_prompt": "ONLY THE QUEEN'S KEY OPENS THE GATE.",
+    "emergency_submit": "[ OFFER THE KEY ]",
+    "emergency_back": "[ I'LL OBEY ]",
+    "emergency_continue": "Beg anyway",
+    "emergency_wrong": "that is not the queen's key~",
+    "emergency_steps": [
+      {
+        "title": "Leaving the court?",
+        "text": "the queen did not dismiss you, piggie. are you really sure you cannot do the task?"
+      },
+      {
+        "title": "A real emergency?",
+        "text": "if it is only that typing is hard, the queen says kneel up and try again~"
+      },
+      {
+        "title": "Breathe, piggie.",
+        "text": "one phrase takes a minute. the queen loves watching a good piggie work."
+      },
+      {
+        "title": "The queen will remember.",
+        "text": "begging for the key is written down as an emergency unlock. she keeps records of everything~"
+      },
+      {
+        "title": "Truly the last time?",
+        "text": "after this only the key is left. the queen gives no favours for giving up."
+      }
+    ]
+  },
+  "protections": {
+    "strict_mode": true,
+    "idle_lock_enabled": true,
+    "idle_lock_minutes": 20
+  }
+}
